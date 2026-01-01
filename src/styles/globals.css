@@ -1,0 +1,498 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   PALATE COLLECTIF - Design Token System
+   Version 2.0
+   
+   A luxury wine tasting experience with:
+   - Black/off-black backgrounds
+   - Wine/rose accent colors
+   - Gold highlights for emphasis
+   - Premium, minimalist aesthetic
+   ============================================ */
+
+@layer base {
+  /* ---------- Light Theme (Default) ---------- */
+  :root {
+    /* Core backgrounds */
+    --background: #FAFAF9;
+    --background-secondary: #F5F5F4;
+    --background-tertiary: #E7E5E4;
+    
+    /* Surfaces (cards, modals, elevated elements) */
+    --surface: #FFFFFF;
+    --surface-elevated: #FFFFFF;
+    --surface-overlay: rgba(255, 255, 255, 0.95);
+    
+    /* Text colors - Black dominant for structure */
+    --foreground: #171717;
+    --foreground-secondary: #525252;
+    --foreground-muted: #78716C;
+    --foreground-inverse: #F5F5F4;
+    
+    /* Wine accent - Deep wine for light mode */
+    --wine: #722F37;
+    --wine-hover: #8B4557;
+    --wine-muted: rgba(114, 47, 55, 0.1);
+    --wine-glow: rgba(114, 47, 55, 0.4);
+    --wine-gradient-start: #722F37;
+    --wine-gradient-end: #8B4557;
+    
+    /* Gold accent - Amber for light mode contrast */
+    --gold: #B8860B;
+    --gold-hover: #A16207;
+    --gold-muted: rgba(184, 134, 11, 0.1);
+    --gold-glow: rgba(184, 134, 11, 0.4);
+    --gold-gradient-start: #B8860B;
+    --gold-gradient-end: #D4AF37;
+    
+    /* Borders */
+    --border: #E7E5E4;
+    --border-secondary: #D6D3D1;
+    --border-accent: rgba(114, 47, 55, 0.3);
+    
+    /* Focus rings */
+    --ring: #722F37;
+    --ring-offset: #FAFAF9;
+    
+    /* Shadows */
+    --shadow-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-elevation-2: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+    --shadow-elevation-3: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+    
+    /* Interactive states */
+    --hover-overlay: rgba(0, 0, 0, 0.04);
+    --active-overlay: rgba(0, 0, 0, 0.08);
+    --disabled-opacity: 0.5;
+    
+    /* Rating specific */
+    --star-empty: #D6D3D1;
+    --star-filled: #B8860B;
+    --star-hover: #D4AF37;
+    
+    /* Glassmorphism effects */
+    --glass-background: rgba(255, 255, 255, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-blur: 12px;
+    
+    /* Animation variables */
+    --glow-color: rgba(114, 47, 55, 0.3);
+    --transition-fast: 150ms;
+    --transition-normal: 250ms;
+    --transition-slow: 400ms;
+  }
+
+  /* ---------- Dark Theme ---------- */
+  .dark {
+    /* Core backgrounds - Off-black for eye comfort */
+    --background: #0A0A0A;
+    --background-secondary: #0F0F0F;
+    --background-tertiary: #171717;
+    
+    /* Surfaces - Soft black for cards */
+    --surface: #141414;
+    --surface-elevated: #1A1A1A;
+    --surface-overlay: rgba(20, 20, 20, 0.95);
+    
+    /* Text colors - Off-white for readability */
+    --foreground: #F5F5F4;
+    --foreground-secondary: #A8A29E;
+    --foreground-muted: #78716C;
+    --foreground-inverse: #171717;
+    
+    /* Wine accent - Muted mauve for dark mode visibility */
+    --wine: #8B4557;
+    --wine-hover: #A15568;
+    --wine-muted: rgba(139, 69, 87, 0.15);
+    --wine-glow: rgba(139, 69, 87, 0.5);
+    --wine-gradient-start: #8B4557;
+    --wine-gradient-end: #A15568;
+    
+    /* Gold accent - Bright gold for dark mode pop */
+    --gold: #FFD700;
+    --gold-hover: #FFE44D;
+    --gold-muted: rgba(255, 215, 0, 0.15);
+    --gold-glow: rgba(255, 215, 0, 0.5);
+    --gold-gradient-start: #FFD700;
+    --gold-gradient-end: #FFC107;
+    
+    /* Borders - Subtle on dark */
+    --border: #262626;
+    --border-secondary: #333333;
+    --border-accent: rgba(139, 69, 87, 0.4);
+    
+    /* Focus rings */
+    --ring: #8B4557;
+    --ring-offset: #0A0A0A;
+    
+    /* Shadows - More subtle in dark mode */
+    --shadow-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-elevation-2: 0 4px 6px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-elevation-3: 0 10px 15px rgba(0, 0, 0, 0.35), 0 4px 6px rgba(0, 0, 0, 0.2);
+    
+    /* Interactive states */
+    --hover-overlay: rgba(255, 255, 255, 0.05);
+    --active-overlay: rgba(255, 255, 255, 0.1);
+    --disabled-opacity: 0.4;
+    
+    /* Rating specific */
+    --star-empty: #404040;
+    --star-filled: #FFD700;
+    --star-hover: #FFE44D;
+    
+    /* Glassmorphism effects */
+    --glass-background: rgba(20, 20, 20, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-blur: 12px;
+    
+    /* Animation variables */
+    --glow-color: rgba(139, 69, 87, 0.4);
+  }
+
+  /* ---------- Base Styles ---------- */
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Improve text rendering */
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Focus styles for accessibility */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Selection colors */
+  ::selection {
+    background-color: var(--wine-muted);
+    color: var(--foreground);
+  }
+
+  .dark ::selection {
+    background-color: var(--wine-muted);
+  }
+}
+
+/* ============================================
+   COMPONENT UTILITIES
+   ============================================ */
+
+@layer components {
+  /* Glass morphism card */
+  .glass {
+    background: var(--glass-background);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+  }
+
+  /* Surface card with elevation */
+  .surface {
+    background: var(--surface);
+    border-radius: theme('borderRadius.xl');
+    box-shadow: var(--shadow-elevation-1);
+  }
+
+  .surface-elevated {
+    background: var(--surface-elevated);
+    border-radius: theme('borderRadius.xl');
+    box-shadow: var(--shadow-elevation-2);
+  }
+
+  /* Wine accent gradient text */
+  .text-gradient-wine {
+    background: linear-gradient(135deg, var(--wine), var(--wine-hover));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gold accent gradient text */
+  .text-gradient-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-hover));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Wine glow effect */
+  .glow-wine {
+    box-shadow: 0 0 20px -5px var(--wine-glow);
+  }
+
+  /* Gold glow effect */
+  .glow-gold {
+    box-shadow: 0 0 20px -5px var(--gold-glow);
+  }
+
+  /* Button base styles */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply font-medium transition-all duration-250;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    @apply disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply btn px-6 py-3 rounded-xl;
+    background: var(--wine);
+    color: white;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--wine-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-elevation-2);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .btn-secondary {
+    @apply btn px-6 py-3 rounded-xl;
+    background: var(--surface);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--hover-overlay);
+    border-color: var(--border-secondary);
+  }
+
+  .btn-ghost {
+    @apply btn px-4 py-2 rounded-lg;
+    background: transparent;
+    color: var(--foreground-secondary);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--hover-overlay);
+    color: var(--foreground);
+  }
+
+  .btn-gold {
+    @apply btn px-6 py-3 rounded-xl;
+    background: var(--gold);
+    color: var(--foreground-inverse);
+  }
+
+  .btn-gold:hover:not(:disabled) {
+    background: var(--gold-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 0 20px -5px var(--gold-glow);
+  }
+
+  /* Input styles */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl;
+    @apply text-body-md;
+    @apply transition-all duration-250;
+    @apply focus:outline-none focus:ring-2;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+  }
+
+  .input::placeholder {
+    color: var(--foreground-muted);
+  }
+
+  .input:focus {
+    border-color: var(--wine);
+    --tw-ring-color: var(--wine-muted);
+  }
+
+  .input:disabled {
+    opacity: var(--disabled-opacity);
+    cursor: not-allowed;
+  }
+
+  /* Card container */
+  .card {
+    @apply rounded-2xl p-6;
+    background: var(--surface);
+    box-shadow: var(--shadow-elevation-1);
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer;
+    @apply transition-all duration-250;
+  }
+
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevation-2);
+  }
+
+  .card-interactive:active {
+    transform: translateY(0);
+  }
+
+  /* Wine type badges */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full;
+    @apply text-label-sm font-medium;
+  }
+
+  .badge-wine {
+    background: var(--wine-muted);
+    color: var(--wine);
+  }
+
+  .badge-gold {
+    background: var(--gold-muted);
+    color: var(--gold);
+  }
+
+  /* Divider */
+  .divider {
+    @apply w-full h-px;
+    background: var(--border);
+  }
+
+  /* Container for consistent max-width */
+  .container-app {
+    @apply w-full max-w-md mx-auto px-4;
+  }
+
+  .container-admin {
+    @apply w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Subtle noise texture overlay */
+  .noise-overlay {
+    position: relative;
+  }
+
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/textures/noise.png');
+    opacity: 0.03;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+
+  /* Safe area padding for mobile */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Text truncation */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Animation delays for staggered reveals */
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-400 { animation-delay: 400ms; }
+  .animate-delay-500 { animation-delay: 500ms; }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  :root {
+    --border: #525252;
+    --border-secondary: #404040;
+  }
+
+  .dark {
+    --border: #A8A29E;
+    --border-secondary: #D6D3D1;
+  }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
