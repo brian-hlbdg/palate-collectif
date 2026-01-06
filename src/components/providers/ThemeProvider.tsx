@@ -56,7 +56,15 @@ export function ThemeProvider({
   useEffect(() => {
     const stored = localStorage.getItem(storageKey) as Theme | null
     const initialTheme = stored || defaultTheme
-    const resolved = resolveTheme(initialTheme)
+    
+    const getResolved = (t: Theme): 'light' | 'dark' => {
+      if (t === 'system') {
+        return getSystemTheme()
+      }
+      return t
+    }
+    
+    const resolved = getResolved(initialTheme)
     
     setThemeState(initialTheme)
     setResolvedTheme(resolved)
@@ -111,7 +119,12 @@ export function ThemeProvider({
 export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext)
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider')
+    // Return safe defaults if used outside provider (during SSR or initial render)
+    return {
+      theme: 'system',
+      resolvedTheme: 'dark',
+      setTheme: () => {},
+    }
   }
   return context
 }

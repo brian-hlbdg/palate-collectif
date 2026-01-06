@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/components/providers'
@@ -14,6 +14,25 @@ interface ThemeToggleProps {
 
 export function ThemeToggle({ variant = 'simple', className }: ThemeToggleProps) {
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // Only render after mounting to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    // Return placeholder with same dimensions to prevent layout shift
+    return (
+      <div
+        className={cn(
+          'p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)]',
+          'w-9 h-9',
+          className
+        )}
+      />
+    )
+  }
 
   if (variant === 'simple') {
     return (

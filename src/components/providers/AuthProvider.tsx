@@ -40,29 +40,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return data as User
   }
 
-  // Handle session changes
-  const handleSession = async (session: Session | null) => {
-    if (session?.user) {
-      const profile = await fetchUserProfile(session.user.id)
-      setUser(profile)
-    } else {
-      setUser(null)
-    }
-    setIsLoading(false)
-  }
-
   // Initialize auth state
   useEffect(() => {
+    // Handle session changes
+    const processSession = async (session: Session | null) => {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id)
+        setUser(profile)
+      } else {
+        setUser(null)
+      }
+      setIsLoading(false)
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSession(session)
+      processSession(session)
     })
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      handleSession(session)
+      processSession(session)
     })
 
     return () => subscription.unsubscribe()
