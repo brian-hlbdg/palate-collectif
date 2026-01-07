@@ -111,15 +111,16 @@ export default function BoothEntryPage() {
         // User exists, use their ID
         userId = existingUser.id
       } else {
-        // Create new temp user
-        const tempId = `booth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        // Generate a proper UUID
+        const newUUID = crypto.randomUUID()
+        
         const expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + 30) // 30 days for booth users
 
         const { error: createError } = await supabase
           .from('profiles')
           .insert({
-            id: tempId,
+            id: newUUID,
             display_name: trimmedEmail.split('@')[0], // Use email prefix as name
             eventbrite_email: trimmedEmail,
             is_temp_account: true,
@@ -128,10 +129,11 @@ export default function BoothEntryPage() {
           })
 
         if (createError) {
+          console.error('Profile creation error:', createError)
           throw createError
         }
 
-        userId = tempId
+        userId = newUUID
       }
 
       // Store user info in localStorage
