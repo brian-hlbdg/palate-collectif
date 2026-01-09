@@ -9,6 +9,7 @@ import { WineLoader, WineTypeBadge } from '@/components/ui'
 import { Modal, ConfirmDialog } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
+import WineSearch from '@/components/WineSearch'
 import {
   ArrowLeft,
   Plus,
@@ -17,7 +18,22 @@ import {
   Edit,
   Trash2,
   Save,
+  Sparkles,
 } from 'lucide-react'
+
+interface WineMaster {
+  id: string
+  wine_name: string
+  producer?: string
+  vintage?: number
+  wine_type: string
+  region?: string
+  country?: string
+  price_point?: string
+  alcohol_content?: number
+  default_notes?: string
+  usage_count?: number
+}
 
 interface EventWine {
   id: string
@@ -31,6 +47,7 @@ interface EventWine {
   sommelier_notes?: string
   alcohol_content?: string
   price_point?: string
+  wine_master_id?: string
 }
 
 interface EventInfo {
@@ -339,6 +356,7 @@ function WineModal({
   const { addToast } = useToast()
   const isEditing = !!wine
 
+  const [selectedMasterWine, setSelectedMasterWine] = useState<WineMaster | null>(null)
   const [wineName, setWineName] = useState('')
   const [producer, setProducer] = useState('')
   const [vintage, setVintage] = useState('')
@@ -351,9 +369,27 @@ function WineModal({
   const [tastingOrder, setTastingOrder] = useState(nextOrder)
   const [isSaving, setIsSaving] = useState(false)
 
+  // Handle wine selection from search
+  const handleWineSelect = (masterWine: WineMaster | null) => {
+    setSelectedMasterWine(masterWine)
+    if (masterWine) {
+      // Auto-fill form with master wine data
+      setWineName(masterWine.wine_name)
+      setProducer(masterWine.producer || '')
+      setVintage(masterWine.vintage?.toString() || '')
+      setWineType(masterWine.wine_type || 'red')
+      setRegion(masterWine.region || '')
+      setCountry(masterWine.country || '')
+      setAlcoholContent(masterWine.alcohol_content?.toString() || '')
+      setPricePoint(masterWine.price_point || '')
+      setSommelierNotes(masterWine.default_notes || '')
+    }
+  }
+
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
+      setSelectedMasterWine(null)
       if (wine) {
         setWineName(wine.wine_name)
         setProducer(wine.producer || '')
@@ -389,6 +425,41 @@ function WineModal({
     setIsSaving(true)
 
     try {
+      let masterWineId = selectedMasterWine?.id || wine?.wine_master_id || null
+
+      // If this is a new wine not from the master list, add it to wines_master
+      if (!masterWineId && !isEditing) {
+        const { data: newMaster, error: masterError } = await supabase
+          .from('wines_master')
+          .insert({
+            wine_name: wineName.trim(),
+            producer: producer.trim() || null,
+            vintage: vintage ? parseInt(vintage) : null,
+            wine_type: wineType,
+            region: region.trim() || null,
+            country: country.trim() || null,
+            price_point: pricePoint || null,
+            alcohol_content: alcoholContent ? parseFloat(alcoholContent) : null,
+            default_notes: sommelierNotes.trim() || null,
+            usage_count: 1,
+          })
+          .select('id')
+          .single()
+
+        if (!masterError && newMaster) {
+          masterWineId = newMaster.id
+        }
+      } else if (masterWineId) {
+        // Increment usage count for existing master wine
+        await supabase.rpc('increment_wine_usage', { wine_id: masterWineId }).catch(() => {
+          // If RPC doesn't exist, try direct update
+          supabase
+            .from('wines_master')
+            .update({ usage_count: (selectedMasterWine?.usage_count || 0) + 1 })
+            .eq('id', masterWineId)
+        })
+      }
+
       const wineData = {
         event_id: eventId,
         wine_name: wineName.trim(),
@@ -401,6 +472,7 @@ function WineModal({
         price_point: pricePoint || null,
         sommelier_notes: sommelierNotes.trim() || null,
         tasting_order: tastingOrder,
+        wine_master_id: masterWineId,
       }
 
       if (isEditing && wine) {
@@ -441,12 +513,39 @@ function WineModal({
       size="lg"
     >
       <div className="space-y-4">
+        {/* Wine search - only show when adding new wine */}
+        {!isEditing && (
+          <div>
+            <label className="text-label-md text-[var(--foreground)] block mb-2">
+              Search Wine Database
+            </label>
+            <WineSearch
+              onSelect={handleWineSelect}
+              placeholder="Start typing wine name or producer..."
+            />
+            {selectedMasterWine && (
+              <div className="mt-2 p-3 rounded-xl bg-[var(--wine-muted)] border border-[var(--wine)]/20">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[var(--wine)]" />
+                  <span className="text-body-sm text-[var(--wine)] font-medium">
+                    Auto-filled from database
+                  </span>
+                </div>
+                <p className="text-body-xs text-[var(--foreground-secondary)] mt-1">
+                  You can edit any field below before saving
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Manual entry fields */}
         <Input
           label="Wine Name *"
           placeholder="e.g., Château Margaux"
           value={wineName}
           onChange={(e) => setWineName(e.target.value)}
-          autoFocus
+          autoFocus={isEditing}
         />
 
         <div className="grid grid-cols-2 gap-4">
