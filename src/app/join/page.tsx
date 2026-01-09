@@ -9,6 +9,7 @@ import { Button, Input, Card } from '@/components/ui'
 import { ThemeToggle } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
+import QRScanner from '@/components/QRScanner'
 import {
   Wine,
   ArrowLeft,
@@ -17,6 +18,7 @@ import {
   Mail,
   User,
   Sparkles,
+  Camera,
 } from 'lucide-react'
 
 type JoinStep = 'code' | 'details'
@@ -28,9 +30,10 @@ export default function JoinEventPage() {
   const [step, setStep] = useState<JoinStep>('code')
   const [eventCode, setEventCode] = useState('')
   const [email, setEmail] = useState('')
+  const [showScanner, setShowScanner] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [event, setEvent] = useState<{ id: string; event_name: string; event_type: string } | null>(null)
+  const [event, setEvent] = useState<{ id: string; event_name: string; is_booth_mode: boolean } | null>(null)
   const [error, setError] = useState('')
 
   // Validate event code
@@ -42,7 +45,7 @@ export default function JoinEventPage() {
     try {
       const { data, error: fetchError } = await supabase
         .from('tasting_events')
-        .select('id, event_name, event_type, is_active')
+        .select('id, event_name, is_booth_mode, is_active, is_deleted')
         .eq('event_code', eventCode.toUpperCase().trim())
         .single()
 
@@ -51,8 +54,14 @@ export default function JoinEventPage() {
         return
       }
 
-      if (!data.is_active) {
+      if (!data.is_active || data.is_deleted) {
         setError('This event is no longer active.')
+        return
+      }
+
+      // If it's a booth mode event, redirect to booth flow
+      if (data.is_booth_mode) {
+        router.push(`/booth/${eventCode.toUpperCase()}`)
         return
       }
 
@@ -72,8 +81,8 @@ export default function JoinEventPage() {
     setIsLoading(true)
 
     try {
-      // Create temp user
-      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      // Generate proper UUID for the profile
+      const tempId = crypto.randomUUID()
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 7)
 
@@ -101,8 +110,8 @@ export default function JoinEventPage() {
         message: `Welcome to ${event!.event_name}!`,
       })
 
-      // Navigate to event
-      router.push(`/event/${event!.id}`)
+      // Navigate to event page using event_code
+      router.push(`/event/${eventCode.toUpperCase()}`)
     } catch (err) {
       setError('Failed to join event. Please try again.')
     } finally {
@@ -196,11 +205,27 @@ export default function JoinEventPage() {
                   <Button
                     variant="secondary"
                     fullWidth
-                    onClick={() => addToast({ type: 'info', message: 'QR Scanner coming soon!' })}
+                    onClick={() => setShowScanner(true)}
+                    leftIcon={<Camera className="h-5 w-5" />}
                   >
                     Scan QR Code
                   </Button>
                 </Card>
+
+                {/* QR Scanner Modal */}
+                <QRScanner
+                  isOpen={showScanner}
+                  onClose={() => setShowScanner(false)}
+                  onScan={(code) => {
+                    setEventCode(code)
+                    setShowScanner(false)
+                    // Auto-submit the code
+                    setTimeout(() => {
+                      const form = document.querySelector('form')
+                      if (form) form.requestSubmit()
+                    }, 100)
+                  }}
+                />
               </motion.div>
             ) : (
               <motion.div
