@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { WineLoader } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
+import BulkWineImport from '@/components/BulkWineImport'
 import {
   Wine,
   Search,
@@ -24,6 +25,7 @@ import {
   XCircle,
   Edit,
   Eye,
+  Upload,
 } from 'lucide-react'
 
 interface UserWine {
@@ -75,6 +77,7 @@ export default function CuratorWinesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [duplicates, setDuplicates] = useState<Record<string, PotentialDuplicate[]>>({})
+  const [showBulkImport, setShowBulkImport] = useState(false)
 
   // Load data based on active tab
   useEffect(() => {
@@ -308,13 +311,27 @@ export default function CuratorWinesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-display-md font-bold text-[var(--foreground)]">
-          Wine Review
-        </h1>
-        <p className="text-body-md text-[var(--foreground-secondary)] mt-1">
-          Review user submissions and manage the master wine database
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-display-md font-bold text-[var(--foreground)]">
+            Wine Review
+          </h1>
+          <p className="text-body-md text-[var(--foreground-secondary)] mt-1">
+            Review user submissions and manage the master wine database
+          </p>
+        </div>
+        <button
+          onClick={() => setShowBulkImport(true)}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-xl',
+            'text-body-sm font-medium',
+            'border border-[var(--wine)] text-[var(--wine)]',
+            'hover:bg-[var(--wine)]/10 transition-colors'
+          )}
+        >
+          <Upload className="h-4 w-4" />
+          Import to Master
+        </button>
       </div>
 
       {/* Tabs */}
@@ -408,6 +425,16 @@ export default function CuratorWinesPage() {
           )}
         </div>
       )}
+
+      {/* Bulk Import to Master List */}
+      <BulkWineImport
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onComplete={(count) => {
+          addToast({ type: 'success', message: `${count} wines imported to master list` })
+          loadData()
+        }}
+      />
     </div>
   )
 }

@@ -16,6 +16,8 @@ import {
   Menu,
   X,
   User,
+  Library,
+  Sparkles,
 } from 'lucide-react'
 
 interface UserProfile {
@@ -87,7 +89,9 @@ export default function UserLayout({
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/favorites', icon: Heart, label: 'Favorites' },
+    { href: '/collection', icon: Library, label: 'My Collection' },
+    { href: '/favorites', icon: Heart, label: 'Would Buy' },
+    { href: '/profile', icon: Sparkles, label: 'Taste Profile' },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ]
 

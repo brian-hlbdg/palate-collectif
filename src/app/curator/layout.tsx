@@ -42,6 +42,12 @@ export default function CuratorLayout({
   // Check curator auth
   useEffect(() => {
     const checkCurator = async () => {
+      // Skip auth check on login page
+      if (pathname === '/curator/login') {
+        setIsLoading(false)
+        return
+      }
+
       const storedUserId = localStorage.getItem('palate-curator-user')
       
       if (storedUserId) {
@@ -67,12 +73,12 @@ export default function CuratorLayout({
         }
       }
 
-      // Not a curator, redirect
-      router.push('/login')
+      // Not a curator, redirect to curator login
+      router.push('/curator/login')
     }
 
     checkCurator()
-  }, [router])
+  }, [router, pathname])
 
   const handleLogout = () => {
     localStorage.removeItem('palate-curator-user')
@@ -116,6 +122,11 @@ export default function CuratorLayout({
         <WineLoader />
       </div>
     )
+  }
+
+  // Render login page without sidebar
+  if (pathname === '/curator/login') {
+    return <>{children}</>
   }
 
   if (!user) {

@@ -10,6 +10,7 @@ import { Modal, ConfirmDialog } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import WineSearch from '@/components/WineSearch'
+import BulkWineImport from '@/components/BulkWineImport'
 import {
   ArrowLeft,
   Plus,
@@ -19,6 +20,7 @@ import {
   Trash2,
   Save,
   Sparkles,
+  Upload,
 } from 'lucide-react'
 
 interface WineMaster {
@@ -79,9 +81,23 @@ export default function ManageWinesPage() {
 
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showBulkImport, setShowBulkImport] = useState(false)
   const [editingWine, setEditingWine] = useState<EventWine | null>(null)
   const [deleteWine, setDeleteWine] = useState<EventWine | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Load wines function (can be called after bulk import)
+  const loadWines = async () => {
+    const { data: winesData } = await supabase
+      .from('event_wines')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('tasting_order', { ascending: true })
+
+    if (winesData) {
+      setWines(winesData)
+    }
+  }
 
   // Load event and wines
   useEffect(() => {
@@ -97,15 +113,7 @@ export default function ManageWinesPage() {
           setEvent(eventData)
         }
 
-        const { data: winesData } = await supabase
-          .from('event_wines')
-          .select('*')
-          .eq('event_id', eventId)
-          .order('tasting_order', { ascending: true })
-
-        if (winesData) {
-          setWines(winesData)
-        }
+        await loadWines()
       } catch (err) {
         console.error('Error loading data:', err)
       } finally {
@@ -186,12 +194,21 @@ export default function ManageWinesPage() {
               {event?.event_name} · {wines.length} wines
             </p>
           </div>
-          <Button
-            onClick={() => setShowAddModal(true)}
-            leftIcon={<Plus className="h-5 w-5" />}
-          >
-            Add Wine
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setShowBulkImport(true)}
+              leftIcon={<Upload className="h-5 w-5" />}
+            >
+              Bulk Import
+            </Button>
+            <Button
+              onClick={() => setShowAddModal(true)}
+              leftIcon={<Plus className="h-5 w-5" />}
+            >
+              Add Wine
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -276,6 +293,19 @@ export default function ManageWinesPage() {
         confirmText="Remove"
         variant="danger"
         isLoading={isDeleting}
+      />
+
+      {/* Bulk Import */}
+      <BulkWineImport
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        eventId={eventId}
+        eventName={event?.event_name}
+        onComplete={(count) => {
+          addToast({ type: 'success', message: `${count} wines imported` })
+          // Reload wines
+          loadWines()
+        }}
       />
     </div>
   )

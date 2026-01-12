@@ -151,21 +151,21 @@ export default function FavoritesPage() {
       {/* Header */}
       <div>
         <h1 className="text-display-md font-bold text-[var(--foreground)]">
-          Your Wines
+          Would Buy
         </h1>
         <p className="text-body-md text-[var(--foreground-secondary)] mt-1">
-          All the wines you've rated
+          Wines you loved and want to purchase
         </p>
       </div>
 
       {wines.length === 0 ? (
         <Card variant="outlined" padding="lg" className="text-center">
-          <Heart className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
+          <ShoppingBag className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
           <h2 className="text-body-lg font-semibold text-[var(--foreground)] mb-2">
             No wines yet
           </h2>
           <p className="text-body-md text-[var(--foreground-secondary)] mb-6">
-            Rate wines at events to see them here
+            Mark wines as "Would Buy" when rating to see them here
           </p>
           <Link href="/join">
             <Button>Join an Event</Button>
