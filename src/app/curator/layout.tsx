@@ -19,6 +19,7 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
+  Building,
 } from 'lucide-react'
 
 interface CuratorUser {
@@ -108,6 +109,11 @@ export default function CuratorLayout({
       href: '/curator/admins', 
       icon: Users, 
       label: 'Admins',
+    },
+    { 
+      href: '/curator/groups', 
+      icon: Building, 
+      label: 'Groups',
     },
     { 
       href: '/curator/health', 

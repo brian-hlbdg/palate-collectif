@@ -8,6 +8,7 @@ import { WineLoader } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import BulkWineImport from '@/components/BulkWineImport'
+import WineEditor from '@/components/WineEditor'
 import {
   Wine,
   Search,
@@ -78,6 +79,7 @@ export default function CuratorWinesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [duplicates, setDuplicates] = useState<Record<string, PotentialDuplicate[]>>({})
   const [showBulkImport, setShowBulkImport] = useState(false)
+  const [editingMasterWine, setEditingMasterWine] = useState<MasterWine | null>(null)
 
   // Load data based on active tab
   useEffect(() => {
@@ -391,7 +393,11 @@ export default function CuratorWinesPage() {
             <EmptyState message="No wines in master list" />
           ) : (
             filteredMasterWines.map((wine) => (
-              <MasterWineCard key={wine.id} wine={wine} />
+              <MasterWineCard 
+                key={wine.id} 
+                wine={wine} 
+                onEdit={() => setEditingMasterWine(wine)}
+              />
             ))
           )}
         </div>
@@ -432,6 +438,16 @@ export default function CuratorWinesPage() {
         onClose={() => setShowBulkImport(false)}
         onComplete={(count) => {
           addToast({ type: 'success', message: `${count} wines imported to master list` })
+          loadData()
+        }}
+      />
+
+      {/* Wine Editor Modal */}
+      <WineEditor
+        isOpen={!!editingMasterWine}
+        onClose={() => setEditingMasterWine(null)}
+        wine={editingMasterWine}
+        onSave={() => {
           loadData()
         }}
       />
@@ -589,7 +605,13 @@ function UserWineCard({
 }
 
 // Master wine card component
-function MasterWineCard({ wine }: { wine: MasterWine }) {
+function MasterWineCard({ 
+  wine, 
+  onEdit 
+}: { 
+  wine: MasterWine
+  onEdit: () => void 
+}) {
   return (
     <div className="border border-[var(--border)] rounded-xl p-4">
       <div className="flex items-center gap-4">
@@ -604,12 +626,23 @@ function MasterWineCard({ wine }: { wine: MasterWine }) {
             {[wine.producer, wine.vintage, wine.region, wine.country].filter(Boolean).join(' · ')}
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right mr-2">
           <p className="text-body-sm font-medium text-[var(--foreground)]">
             {wine.usage_count || 0}
           </p>
           <p className="text-body-xs text-[var(--foreground-muted)]">uses</p>
         </div>
+        <button
+          onClick={onEdit}
+          className={cn(
+            'p-2 rounded-lg border border-[var(--border)]',
+            'text-[var(--foreground-muted)]',
+            'hover:border-[var(--wine)] hover:text-[var(--wine)]',
+            'transition-colors'
+          )}
+        >
+          <Edit className="h-4 w-4" />
+        </button>
       </div>
     </div>
   )
