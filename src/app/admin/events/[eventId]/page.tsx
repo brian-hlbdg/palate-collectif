@@ -2,191 +2,214 @@
 
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { Card, Button, Input, Textarea, Badge } from '@/components/ui'
-import { WineLoader, StatusBadge } from '@/components/ui'
+import { Card, Button } from '@/components/ui'
+import { WineLoader } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
-import QRCodeGenerator from '@/components/QRCodeGenerator'
+import AdminWineForm from '@/components/AdminWineForm'
+import WineDetailCard from '@/components/WineDetailCard'
 import {
   ArrowLeft,
+  Wine,
+  Plus,
+  Edit,
+  Trash2,
+  BarChart3,
   Calendar,
   MapPin,
-  Type,
   Users,
-  Wine,
   Copy,
-  ExternalLink,
-  Save,
-  Trash2,
-  Eye,
-  EyeOff,
-  Settings,
-  Star,
+  Check,
   QrCode,
+  Star,
+  GripVertical,
 } from 'lucide-react'
 
-interface EventDetails {
+interface EventData {
   id: string
   event_code: string
   event_name: string
   event_date: string
   location?: string
   description?: string
-  max_participants?: number
   is_active: boolean
-  is_booth_mode: boolean
-  access_type?: string
-  booth_welcome_message?: string
-  booth_logo_url?: string
-  booth_primary_color?: string
 }
 
-interface EventStats {
-  wineCount: number
-  ratingCount: number
-  participantCount: number
+interface WineData {
+  id: string
+  wine_name: string
+  producer?: string
+  vintage?: number
+  wine_type: string
+  region?: string
+  country?: string
+  tasting_order?: number
+  location_name?: string
+  image_url?: string
+  grape_varieties?: any
+  wine_style?: any
+  tasting_notes?: any
+  technical_details?: any
+  awards?: any
+  alcohol_content?: number
+  price_point?: string
+  sommelier_notes?: string
 }
 
-export default function EditEventPage() {
+interface LocationData {
+  id: string
+  location_name: string
+  location_order: number
+}
+
+export default function AdminEventPage() {
   const params = useParams()
   const router = useRouter()
   const { addToast } = useToast()
   const eventId = params.eventId as string
 
-  const [event, setEvent] = useState<EventDetails | null>(null)
-  const [stats, setStats] = useState<EventStats>({ wineCount: 0, ratingCount: 0, participantCount: 0 })
+  const [event, setEvent] = useState<EventData | null>(null)
+  const [wines, setWines] = useState<WineData[]>([])
+  const [locations, setLocations] = useState<LocationData[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [copiedCode, setCopiedCode] = useState(false)
 
-  // Form state
-  const [eventName, setEventName] = useState('')
-  const [eventDate, setEventDate] = useState('')
-  const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
-  const [maxParticipants, setMaxParticipants] = useState('')
-  const [boothWelcomeMessage, setBoothWelcomeMessage] = useState('')
+  // Wine form state
+  const [showWineForm, setShowWineForm] = useState(false)
+  const [editingWine, setEditingWine] = useState<WineData | null>(null)
 
-  // Load event
+  // Stats
+  const [stats, setStats] = useState({ participants: 0, ratings: 0, avgRating: 0 })
+
   useEffect(() => {
-    const loadEvent = async () => {
-      try {
-        const { data: eventData } = await supabase
-          .from('tasting_events')
-          .select('*')
-          .eq('id', eventId)
-          .single()
+    if (eventId) {
+      loadData()
+    }
+  }, [eventId])
 
-        if (eventData) {
-          setEvent(eventData)
-          setEventName(eventData.event_name)
-          setEventDate(eventData.event_date)
-          setLocation(eventData.location || '')
-          setDescription(eventData.description || '')
-          setMaxParticipants(eventData.max_participants?.toString() || '')
-          setBoothWelcomeMessage(eventData.booth_welcome_message || '')
+  const loadData = async () => {
+    try {
+      // Load event
+      const { data: eventData, error: eventError } = await supabase
+        .from('tasting_events')
+        .select('*')
+        .eq('id', eventId)
+        .single()
 
-          // Load stats
-          const { data: wines } = await supabase
-            .from('event_wines')
-            .select('id')
-            .eq('event_id', eventId)
+      if (eventError) throw eventError
+      setEvent(eventData)
 
-          const wineIds = wines?.map(w => w.id) || []
+      // Load wines
+      const { data: wineData } = await supabase
+        .from('event_wines')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('tasting_order', { ascending: true })
 
-          const { data: ratings } = await supabase
-            .from('user_wine_ratings')
-            .select('id, user_id')
-            .in('event_wine_id', wineIds)
+      setWines(wineData || [])
 
-          const uniqueUsers = new Set(ratings?.map(r => r.user_id) || [])
+      // Load locations
+      const { data: locationData } = await supabase
+        .from('event_locations')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('location_order', { ascending: true })
+
+      setLocations(locationData || [])
+
+      // Load stats
+      if (wineData && wineData.length > 0) {
+        const wineIds = wineData.map(w => w.id)
+        const { data: ratings } = await supabase
+          .from('user_wine_ratings')
+          .select('user_id, rating')
+          .in('event_wine_id', wineIds)
+
+        if (ratings) {
+          const uniqueUsers = new Set(ratings.map(r => r.user_id))
+          const avgRating = ratings.length > 0
+            ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+            : 0
 
           setStats({
-            wineCount: wines?.length || 0,
-            ratingCount: ratings?.length || 0,
-            participantCount: uniqueUsers.size,
+            participants: uniqueUsers.size,
+            ratings: ratings.length,
+            avgRating: Math.round(avgRating * 10) / 10,
           })
         }
-      } catch (err) {
-        console.error('Error loading event:', err)
-        addToast({ type: 'error', message: 'Failed to load event' })
-      } finally {
-        setIsLoading(false)
       }
-    }
-
-    loadEvent()
-  }, [eventId, addToast])
-
-  // Save event
-  const handleSave = async () => {
-    if (!event) return
-    setIsSaving(true)
-
-    try {
-      const updateData = {
-        event_name: eventName.trim(),
-        event_date: eventDate,
-        location: location.trim() || null,
-        description: description.trim() || null,
-        max_participants: maxParticipants ? parseInt(maxParticipants) : null,
-        booth_welcome_message: event.is_booth_mode ? boothWelcomeMessage.trim() || null : null,
-        updated_at: new Date().toISOString(),
-      }
-
-      const { error } = await supabase
-        .from('tasting_events')
-        .update(updateData)
-        .eq('id', eventId)
-
-      if (error) throw error
-
-      setEvent({ ...event, ...updateData })
-      addToast({ type: 'success', message: 'Event updated successfully' })
     } catch (err) {
-      console.error('Error saving event:', err)
-      addToast({ type: 'error', message: 'Failed to save changes' })
+      console.error('Error loading event:', err)
+      addToast({ type: 'error', message: 'Failed to load event' })
     } finally {
-      setIsSaving(false)
+      setIsLoading(false)
     }
   }
 
-  // Toggle active status
-  const toggleStatus = async () => {
-    if (!event) return
+  const copyEventCode = () => {
+    if (event?.event_code) {
+      navigator.clipboard.writeText(event.event_code)
+      setCopiedCode(true)
+      setTimeout(() => setCopiedCode(false), 2000)
+    }
+  }
+
+  const deleteWine = async (wineId: string) => {
+    if (!confirm('Are you sure you want to delete this wine?')) return
 
     try {
       const { error } = await supabase
-        .from('tasting_events')
-        .update({ is_active: !event.is_active })
-        .eq('id', eventId)
+        .from('event_wines')
+        .delete()
+        .eq('id', wineId)
 
       if (error) throw error
-
-      setEvent({ ...event, is_active: !event.is_active })
-      addToast({
-        type: 'success',
-        message: `Event ${event.is_active ? 'deactivated' : 'activated'}`,
-      })
+      addToast({ type: 'success', message: 'Wine deleted' })
+      loadData()
     } catch (err) {
-      addToast({ type: 'error', message: 'Failed to update status' })
+      console.error('Error deleting wine:', err)
+      addToast({ type: 'error', message: 'Failed to delete wine' })
     }
   }
 
-  // Copy helpers
-  const copyEventCode = () => {
-    if (!event) return
-    navigator.clipboard.writeText(event.event_code)
-    addToast({ type: 'success', message: 'Event code copied!' })
+  const handleEditWine = (wine: WineData) => {
+    setEditingWine(wine)
+    setShowWineForm(true)
   }
 
-  const copyBoothUrl = () => {
-    if (!event) return
-    const url = `${window.location.origin}/booth/${event.event_code}`
-    navigator.clipboard.writeText(url)
-    addToast({ type: 'success', message: 'Booth URL copied!' })
+  const handleAddWine = () => {
+    setEditingWine(null)
+    setShowWineForm(true)
+  }
+
+  const handleWineSaved = () => {
+    setShowWineForm(false)
+    setEditingWine(null)
+    loadData()
+  }
+
+  // Group wines by location
+  const groupedWines = () => {
+    if (locations.length === 0) {
+      return [{ location: null, wines }]
+    }
+
+    const groups: { location: LocationData | null; wines: WineData[] }[] = []
+    
+    locations.forEach(loc => {
+      groups.push({
+        location: loc,
+        wines: wines.filter(w => w.location_name === loc.location_name)
+      })
+    })
+
+    const unassigned = wines.filter(w => !w.location_name)
+    if (unassigned.length > 0) {
+      groups.push({ location: null, wines: unassigned })
+    }
+
+    return groups
   }
 
   if (isLoading) {
@@ -199,237 +222,242 @@ export default function EditEventPage() {
 
   if (!event) {
     return (
-      <Card variant="outlined" padding="lg" className="text-center">
-        <p className="text-body-lg text-[var(--foreground-secondary)]">
-          Event not found
-        </p>
-        <Button
-          variant="secondary"
-          className="mt-4"
-          onClick={() => router.push('/admin/events')}
-        >
+      <div className="text-center py-12">
+        <p className="text-body-md text-[var(--foreground-secondary)]">Event not found</p>
+        <Button variant="secondary" className="mt-4" onClick={() => router.push('/admin/events')}>
           Back to Events
         </Button>
-      </Card>
+      </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-8">
-        <button
-          onClick={() => router.push('/admin/events')}
-          className="flex items-center gap-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors mb-4"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="text-body-sm">Back to Events</span>
-        </button>
-        
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-display-md font-bold text-[var(--foreground)]">
-                {event.event_name}
-              </h1>
-              {event.is_booth_mode && (
-                <Badge variant="gold">Booth</Badge>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push('/admin/events')}
+            className="p-2 rounded-lg border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-display-md font-bold text-[var(--foreground)]">
+              {event.event_name}
+            </h1>
+            <div className="flex items-center gap-4 mt-1 text-body-sm text-[var(--foreground-secondary)]">
+              {event.event_date && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  {new Date(event.event_date).toLocaleDateString()}
+                </span>
+              )}
+              {event.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  {event.location}
+                </span>
               )}
             </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={copyEventCode}
-                className="flex items-center gap-2 text-body-sm text-[var(--foreground-secondary)] hover:text-[var(--wine)] transition-colors"
-              >
-                <span className="font-mono font-bold">{event.event_code}</span>
-                <Copy className="h-4 w-4" />
-              </button>
-              <StatusBadge status={event.is_active ? 'active' : 'inactive'} />
-            </div>
           </div>
-          
-          <div className="flex gap-2">
-            <QRCodeGenerator
-              eventCode={event.event_code}
-              eventName={event.event_name}
-              isBoothMode={event.is_booth_mode}
-            />
-            <Button
-              variant="secondary"
-              onClick={toggleStatus}
-              leftIcon={event.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            >
-              {event.is_active ? 'Deactivate' : 'Activate'}
-            </Button>
-            <Button
-              onClick={handleSave}
-              isLoading={isSaving}
-              leftIcon={<Save className="h-4 w-4" />}
-            >
-              Save Changes
-            </Button>
-          </div>
+        </div>
+
+        {/* Event Code & Actions */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={copyEventCode}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-body-md',
+              'bg-[var(--surface)] border border-[var(--border)]',
+              'hover:border-[var(--foreground-muted)] transition-colors'
+            )}
+          >
+            {copiedCode ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            <span>{event.event_code}</span>
+          </button>
+
+          <Button
+            variant="secondary"
+            leftIcon={<BarChart3 className="h-4 w-4" />}
+            onClick={() => router.push(`/admin/events/${eventId}/analytics`)}
+          >
+            Analytics
+          </Button>
+
+          <Button
+            variant="secondary"
+            leftIcon={<Edit className="h-4 w-4" />}
+            onClick={() => router.push(`/admin/events/${eventId}/edit`)}
+          >
+            Edit Event
+          </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <Card variant="default" padding="md">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--wine-muted)] flex items-center justify-center">
-              <Wine className="h-5 w-5 text-[var(--wine)]" />
-            </div>
-            <div>
-              <p className="text-display-sm font-bold text-[var(--foreground)]">
-                {stats.wineCount}
-              </p>
-              <p className="text-body-xs text-[var(--foreground-muted)]">Wines</p>
-            </div>
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card variant="default" className="text-center py-4">
+          <Wine className="h-6 w-6 mx-auto mb-2 text-[var(--wine)]" />
+          <p className="text-display-sm font-bold text-[var(--foreground)]">{wines.length}</p>
+          <p className="text-body-xs text-[var(--foreground-muted)]">Wines</p>
         </Card>
-        <Card variant="default" padding="md">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--gold-muted)] flex items-center justify-center">
-              <Star className="h-5 w-5 text-[var(--gold)]" />
-            </div>
-            <div>
-              <p className="text-display-sm font-bold text-[var(--foreground)]">
-                {stats.ratingCount}
-              </p>
-              <p className="text-body-xs text-[var(--foreground-muted)]">Ratings</p>
-            </div>
-          </div>
+        <Card variant="default" className="text-center py-4">
+          <Users className="h-6 w-6 mx-auto mb-2 text-blue-500" />
+          <p className="text-display-sm font-bold text-[var(--foreground)]">{stats.participants}</p>
+          <p className="text-body-xs text-[var(--foreground-muted)]">Participants</p>
         </Card>
-        <Card variant="default" padding="md">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--wine-muted)] flex items-center justify-center">
-              <Users className="h-5 w-5 text-[var(--wine)]" />
-            </div>
-            <div>
-              <p className="text-display-sm font-bold text-[var(--foreground)]">
-                {stats.participantCount}
-              </p>
-              <p className="text-body-xs text-[var(--foreground-muted)]">Participants</p>
-            </div>
-          </div>
+        <Card variant="default" className="text-center py-4">
+          <Star className="h-6 w-6 mx-auto mb-2 text-[var(--gold)]" />
+          <p className="text-display-sm font-bold text-[var(--foreground)]">{stats.avgRating || '-'}</p>
+          <p className="text-body-xs text-[var(--foreground-muted)]">Avg Rating</p>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid sm:grid-cols-2 gap-4 mb-8">
-        <Link href={`/admin/events/${eventId}/wines`}>
-          <Card variant="outlined" padding="md" interactive className="h-full">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--wine-muted)] flex items-center justify-center">
-                <Wine className="h-6 w-6 text-[var(--wine)]" />
-              </div>
-              <div>
-                <h3 className="text-body-md font-semibold text-[var(--foreground)]">
-                  Manage Wines
-                </h3>
-                <p className="text-body-sm text-[var(--foreground-secondary)]">
-                  Add, edit, or remove wines
-                </p>
-              </div>
-            </div>
-          </Card>
-        </Link>
+      {/* Wines Section */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-body-lg font-semibold text-[var(--foreground)]">
+            Event Wines
+          </h2>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={handleAddWine}>
+            Add Wine
+          </Button>
+        </div>
 
-        {event.is_booth_mode && (
-          <button onClick={copyBoothUrl} className="text-left">
-            <Card variant="outlined" padding="md" interactive className="h-full">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[var(--gold-muted)] flex items-center justify-center">
-                  <ExternalLink className="h-6 w-6 text-[var(--gold)]" />
-                </div>
-                <div>
-                  <h3 className="text-body-md font-semibold text-[var(--foreground)]">
-                    Copy Booth URL
-                  </h3>
-                  <p className="text-body-sm text-[var(--foreground-secondary)]">
-                    Share with attendees
-                  </p>
+        {wines.length === 0 ? (
+          <Card variant="default" className="text-center py-12">
+            <Wine className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
+            <h3 className="text-body-lg font-semibold text-[var(--foreground)] mb-2">
+              No wines yet
+            </h3>
+            <p className="text-body-md text-[var(--foreground-secondary)] mb-4">
+              Add wines for participants to taste and rate
+            </p>
+            <Button onClick={handleAddWine}>Add First Wine</Button>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {groupedWines().map((group, groupIdx) => (
+              <div key={group.location?.id || 'unassigned'}>
+                {/* Location header */}
+                {(locations.length > 0 || group.location) && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <MapPin className="h-4 w-4 text-[var(--wine)]" />
+                    <h3 className="text-body-md font-semibold text-[var(--foreground)]">
+                      {group.location?.location_name || 'Unassigned'}
+                    </h3>
+                    <span className="text-body-xs text-[var(--foreground-muted)]">
+                      ({group.wines.length} wine{group.wines.length !== 1 ? 's' : ''})
+                    </span>
+                  </div>
+                )}
+
+                {/* Wines in this group */}
+                <div className="space-y-3">
+                  {group.wines.map((wine, idx) => (
+                    <div
+                      key={wine.id}
+                      className="flex items-center gap-4 p-4 rounded-xl border border-[var(--border)] bg-[var(--background)]"
+                    >
+                      {/* Order indicator */}
+                      <div className="flex items-center gap-2 text-[var(--foreground-muted)]">
+                        <GripVertical className="h-4 w-4" />
+                        <span className="text-body-sm font-mono w-6">#{wine.tasting_order || idx + 1}</span>
+                      </div>
+
+                      {/* Wine image/emoji */}
+                      <div className={cn(
+                        'w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 text-xl',
+                        getWineTypeBg(wine.wine_type)
+                      )}>
+                        {wine.image_url ? (
+                          <img src={wine.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                          getWineEmoji(wine.wine_type)
+                        )}
+                      </div>
+
+                      {/* Wine info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-body-md font-medium text-[var(--foreground)] truncate">
+                          {wine.wine_name}
+                        </p>
+                        <p className="text-body-sm text-[var(--foreground-muted)] truncate">
+                          {[wine.producer, wine.vintage, wine.region].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+
+                      {/* Wine type badge */}
+                      <span className={cn(
+                        'px-2 py-1 rounded-full text-body-xs capitalize',
+                        getWineTypeBadge(wine.wine_type)
+                      )}>
+                        {wine.wine_type}
+                      </span>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditWine(wine)}
+                          className="p-2 rounded-lg text-[var(--foreground-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-colors"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteWine(wine.id)}
+                          className="p-2 rounded-lg text-[var(--foreground-muted)] hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </Card>
-          </button>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Event Details Form */}
-      <Card variant="outlined" padding="lg" className="mb-6">
-        <h2 className="text-body-lg font-semibold text-[var(--foreground)] mb-4">
-          Event Details
-        </h2>
-        
-        <div className="space-y-4">
-          <Input
-            label="Event Name"
-            value={eventName}
-            onChange={(e) => setEventName(e.target.value)}
-            leftIcon={<Type className="h-5 w-5" />}
-          />
-
-          <Input
-            label="Event Date"
-            type="date"
-            value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
-            leftIcon={<Calendar className="h-5 w-5" />}
-          />
-
-          <Input
-            label="Location"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            leftIcon={<MapPin className="h-5 w-5" />}
-            placeholder="Optional"
-          />
-
-          <Textarea
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional"
-          />
-
-          <Input
-            label="Max Participants"
-            type="number"
-            value={maxParticipants}
-            onChange={(e) => setMaxParticipants(e.target.value)}
-            leftIcon={<Users className="h-5 w-5" />}
-            placeholder="Leave blank for unlimited"
-          />
-        </div>
-      </Card>
-
-      {/* Booth Settings */}
-      {event.is_booth_mode && (
-        <Card variant="outlined" padding="lg">
-          <h2 className="text-body-lg font-semibold text-[var(--foreground)] mb-4">
-            Booth Settings
-          </h2>
-          
-          <div className="space-y-4">
-            <Textarea
-              label="Welcome Message"
-              value={boothWelcomeMessage}
-              onChange={(e) => setBoothWelcomeMessage(e.target.value)}
-              placeholder="Welcome to our wine tasting experience!"
-            />
-
-            <div className="p-4 rounded-xl bg-[var(--gold-muted)] border border-[var(--gold)]/20">
-              <p className="text-body-sm text-[var(--foreground)] mb-1">
-                <strong>Booth URL</strong>
-              </p>
-              <p className="text-body-sm font-mono text-[var(--foreground-secondary)] break-all">
-                {typeof window !== 'undefined' ? window.location.origin : ''}/booth/{event.event_code}
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
+      {/* Wine Form Modal */}
+      <AdminWineForm
+        isOpen={showWineForm}
+        onClose={() => { setShowWineForm(false); setEditingWine(null) }}
+        eventId={eventId}
+        initialWine={editingWine}
+        onSave={handleWineSaved}
+        locations={locations.map(l => ({ location_name: l.location_name }))}
+        nextTastingOrder={wines.length + 1}
+      />
     </div>
   )
+}
+
+// Helper functions
+function getWineEmoji(wineType: string): string {
+  const map: Record<string, string> = {
+    red: '🍷', white: '🥂', rosé: '🌸', sparkling: '🍾',
+    dessert: '🍯', fortified: '🥃', orange: '🍊'
+  }
+  return map[wineType?.toLowerCase()] || '🍷'
+}
+
+function getWineTypeBg(wineType: string): string {
+  const map: Record<string, string> = {
+    red: 'bg-red-900/20', white: 'bg-yellow-900/20', rosé: 'bg-pink-900/20',
+    sparkling: 'bg-amber-900/20', dessert: 'bg-orange-900/20',
+    fortified: 'bg-amber-900/20', orange: 'bg-orange-900/20'
+  }
+  return map[wineType?.toLowerCase()] || 'bg-red-900/20'
+}
+
+function getWineTypeBadge(wineType: string): string {
+  const map: Record<string, string> = {
+    red: 'bg-red-100 text-red-700', white: 'bg-yellow-100 text-yellow-700',
+    rosé: 'bg-pink-100 text-pink-700', sparkling: 'bg-amber-100 text-amber-700',
+    dessert: 'bg-orange-100 text-orange-700', fortified: 'bg-amber-100 text-amber-700',
+    orange: 'bg-orange-100 text-orange-700'
+  }
+  return map[wineType?.toLowerCase()] || 'bg-gray-100 text-gray-700'
 }

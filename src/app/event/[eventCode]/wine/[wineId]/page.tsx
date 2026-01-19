@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Button, Card, Textarea } from '@/components/ui'
 import { StarRating, WineLoader } from '@/components/ui'
-import { WineTypeBadge } from '@/components/ui'
+// WineTypeBadge removed - using inline badge instead
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import {
@@ -20,7 +20,33 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
+  Award,
+  Utensils,
+  FlaskConical,
+  Eye,
+  Droplets,
+  FileText,
 } from 'lucide-react'
+
+// Country flags mapping
+const countryFlags: Record<string, string> = {
+  'France': '🇫🇷', 'Italy': '🇮🇹', 'Spain': '🇪🇸', 'United States': '🇺🇸', 'USA': '🇺🇸',
+  'Germany': '🇩🇪', 'Portugal': '🇵🇹', 'Argentina': '🇦🇷', 'Chile': '🇨🇱', 'Australia': '🇦🇺',
+  'New Zealand': '🇳🇿', 'South Africa': '🇿🇦', 'Austria': '🇦🇹', 'Greece': '🇬🇷',
+  'Hungary': '🇭🇺', 'Lebanon': '🇱🇧', 'Israel': '🇮🇱', 'Canada': '🇨🇦', 'Mexico': '🇲🇽',
+  'Brazil': '🇧🇷', 'Uruguay': '🇺🇾', 'Japan': '🇯🇵', 'China': '🇨🇳', 'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'UK': '🇬🇧',
+}
+
+// Wine type colors
+const wineTypeColors: Record<string, { bg: string; text: string }> = {
+  red: { bg: 'bg-red-900/30', text: 'text-red-400' },
+  white: { bg: 'bg-yellow-900/30', text: 'text-yellow-400' },
+  rosé: { bg: 'bg-pink-900/30', text: 'text-pink-400' },
+  sparkling: { bg: 'bg-amber-900/30', text: 'text-amber-400' },
+  dessert: { bg: 'bg-orange-900/30', text: 'text-orange-400' },
+  fortified: { bg: 'bg-amber-900/30', text: 'text-amber-600' },
+  orange: { bg: 'bg-orange-900/30', text: 'text-orange-400' },
+}
 
 interface WineDetails {
   id: string
@@ -33,16 +59,28 @@ interface WineDetails {
   sommelier_notes?: string
   alcohol_content?: string
   price_point?: string
+  image_url?: string
   grape_varieties?: { name: string; percentage?: number }[]
+  wine_style?: string[]
+  food_pairings?: { category: string; items: string[] }[]
+  food_pairing_notes?: string
   tasting_notes?: {
     appearance?: string
     aroma?: string
     taste?: string
     finish?: string
   }
+  technical_details?: {
+    ph?: string
+    residual_sugar?: string
+    total_acidity?: string
+    aging?: string
+    production?: string
+  }
+  awards?: string[]
+  winemaker_notes?: string
   tasting_order: number
   location_name?: string
-  winemaker_notes?: string
 }
 
 export default function WineDetailPage() {
@@ -71,6 +109,15 @@ export default function WineDetailPage() {
   const userId = typeof window !== 'undefined'
     ? localStorage.getItem('palate-temp-user')
     : null
+
+  // Helper to parse JSONB fields
+  const parseJSON = <T,>(value: T | string | undefined): T | null => {
+    if (!value) return null
+    if (typeof value === 'string') {
+      try { return JSON.parse(value) } catch { return null }
+    }
+    return value as T
+  }
 
   // Load wine and existing rating
   useEffect(() => {
@@ -103,7 +150,16 @@ export default function WineDetailPage() {
           .single()
 
         if (wineData) {
-          setWine(wineData)
+          // Parse JSONB fields
+          setWine({
+            ...wineData,
+            grape_varieties: parseJSON(wineData.grape_varieties) || [],
+            wine_style: parseJSON(wineData.wine_style) || [],
+            food_pairings: parseJSON(wineData.food_pairings) || [],
+            tasting_notes: parseJSON(wineData.tasting_notes) || {},
+            technical_details: parseJSON(wineData.technical_details) || {},
+            awards: parseJSON(wineData.awards) || [],
+          })
         }
 
         // Load all wine IDs for navigation
@@ -200,6 +256,31 @@ export default function WineDetailPage() {
     }
   }
 
+  // Get wine emoji
+  const getWineEmoji = (type: string | null | undefined) => {
+    const map: Record<string, string> = {
+      red: '🍷', white: '🥂', rosé: '🌸', sparkling: '🍾',
+      dessert: '🍯', fortified: '🥃', orange: '🍊'
+    }
+    return map[type?.toLowerCase() || 'red'] || '🍷'
+  }
+
+  // Check if wine has detailed data
+  const hasDetailedData = wine && (
+    wine.sommelier_notes ||
+    wine.tasting_notes?.appearance ||
+    wine.tasting_notes?.aroma ||
+    wine.tasting_notes?.taste ||
+    wine.tasting_notes?.finish ||
+    (wine.grape_varieties && wine.grape_varieties.length > 0) ||
+    (wine.wine_style && wine.wine_style.length > 0) ||
+    (wine.food_pairings && wine.food_pairings.length > 0) ||
+    wine.technical_details?.ph ||
+    wine.technical_details?.aging ||
+    (wine.awards && wine.awards.length > 0) ||
+    wine.winemaker_notes
+  )
+
   // Loading state
   if (isLoading) {
     return (
@@ -228,6 +309,9 @@ export default function WineDetailPage() {
     )
   }
 
+  const typeColors = wineTypeColors[wine.wine_type?.toLowerCase() || 'red'] || wineTypeColors.red
+  const countryFlag = wine.country ? countryFlags[wine.country] : null
+
   return (
     <div className="min-h-screen bg-[var(--background)] flex flex-col">
       {/* Header */}
@@ -238,185 +322,405 @@ export default function WineDetailPage() {
             className="flex items-center gap-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-            <span className="text-body-sm">Wines</span>
+            <span className="text-body-md">Back</span>
           </button>
-
           <span className="text-body-sm text-[var(--foreground-muted)]">
             {currentIndex + 1} of {allWineIds.length}
           </span>
-
-          <button
-            onClick={() => setWouldBuy(!wouldBuy)}
-            className={cn(
-              'p-2 rounded-xl transition-all duration-200',
-              wouldBuy
-                ? 'text-[var(--gold)] bg-[var(--gold-muted)]'
-                : 'text-[var(--foreground-muted)] hover:text-[var(--gold)]'
-            )}
-            title="Would buy this wine"
-          >
-            <ShoppingBag
-              className={cn('h-5 w-5', wouldBuy && 'fill-current')}
-            />
-          </button>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 p-4 pb-32">
-        {/* Wine info */}
+      <main className="flex-1 p-4 pb-28 space-y-4">
+        {/* Wine Image or Emoji Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
+          className="relative"
         >
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-body-sm text-[var(--foreground-muted)]">
-              #{wine.tasting_order}
-            </span>
-            <WineTypeBadge wineType={wine.wine_type} size="sm" />
-            {wine.location_name && (
-              <span className="text-body-xs text-[var(--foreground-muted)] flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {wine.location_name}
-              </span>
-            )}
-          </div>
-
-          <h1 className="text-display-sm font-bold text-[var(--foreground)] mb-1">
-            {wine.wine_name}
-          </h1>
-
-          {wine.producer && (
-            <p className="text-body-lg text-[var(--foreground-secondary)]">
-              {wine.producer}
-              {wine.vintage && ` · ${wine.vintage}`}
-            </p>
+          {wine.image_url ? (
+            <div className="relative h-64 rounded-2xl overflow-hidden">
+              <img
+                src={wine.image_url}
+                alt={wine.wine_name}
+                className="w-full h-full object-cover"
+              />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              {/* Country flag */}
+              {countryFlag && (
+                <div className="absolute top-4 left-4 text-3xl">
+                  {countryFlag}
+                </div>
+              )}
+              {/* Wine type badge */}
+              <div className="absolute top-4 right-4">
+                <span className={cn(
+                  'px-3 py-1 rounded-full text-body-sm font-medium capitalize',
+                  typeColors.bg, typeColors.text
+                )}>
+                  {wine.wine_type || 'Wine'}
+                </span>
+              </div>
+              {/* Wine info overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-body-xs text-white/80">
+                    #{wine.tasting_order}
+                  </span>
+                  {wine.location_name && (
+                    <span className="text-body-xs text-white/80 flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {wine.location_name}
+                    </span>
+                  )}
+                </div>
+                <h1 className="text-display-sm font-bold text-white">
+                  {wine.wine_name}
+                </h1>
+                {wine.producer && (
+                  <p className="text-body-md text-white/90">
+                    {wine.producer}
+                    {wine.vintage && ` · ${wine.vintage}`}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* No image - show emoji card */
+            <Card variant="wine" padding="lg" className="text-center">
+              <div className={cn(
+                'w-24 h-24 mx-auto rounded-2xl flex items-center justify-center text-5xl mb-4',
+                typeColors.bg
+              )}>
+                {getWineEmoji(wine.wine_type)}
+              </div>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                {countryFlag && <span className="text-2xl">{countryFlag}</span>}
+                <span className="text-body-xs text-[var(--foreground-muted)]">
+                  #{wine.tasting_order}
+                </span>
+                {wine.location_name && (
+                  <span className="text-body-xs text-[var(--foreground-muted)] flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {wine.location_name}
+                  </span>
+                )}
+              </div>
+              <h1 className="text-display-sm font-bold text-[var(--foreground)] mb-1">
+                {wine.wine_name}
+              </h1>
+              {wine.producer && (
+                <p className="text-body-lg text-[var(--foreground-secondary)]">
+                  {wine.producer}
+                  {wine.vintage && ` · ${wine.vintage}`}
+                </p>
+              )}
+            </Card>
           )}
+        </motion.div>
 
-          {/* Quick info */}
-          <div className="flex flex-wrap gap-3 mt-4">
-            {wine.region && (
-              <div className="flex items-center gap-1.5 text-body-sm text-[var(--foreground-muted)]">
-                <MapPin className="h-4 w-4" />
-                {wine.region}{wine.country && `, ${wine.country}`}
-              </div>
-            )}
-            {wine.alcohol_content && (
-              <div className="flex items-center gap-1.5 text-body-sm text-[var(--foreground-muted)]">
-                <Wine className="h-4 w-4" />
-                {wine.alcohol_content}% ABV
-              </div>
-            )}
-            {wine.price_point && (
-              <div className="text-body-sm text-[var(--foreground-muted)]">
-                {wine.price_point}
-              </div>
-            )}
-          </div>
+        {/* Quick Info Bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="flex flex-wrap gap-3"
+        >
+          {wine.region && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--surface)] text-body-sm text-[var(--foreground-secondary)]">
+              <MapPin className="h-4 w-4" />
+              {wine.region}{wine.country && `, ${wine.country}`}
+            </div>
+          )}
+          {wine.alcohol_content && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--surface)] text-body-sm text-[var(--foreground-secondary)]">
+              <Droplets className="h-4 w-4" />
+              {wine.alcohol_content}% ABV
+            </div>
+          )}
+          {wine.price_point && (
+            <div className="px-3 py-1.5 rounded-full bg-[var(--surface)] text-body-sm text-[var(--foreground-secondary)]">
+              {wine.price_point}
+            </div>
+          )}
+          {!wine.image_url && (
+            <div className="ml-auto">
+              <span className={cn(
+                'px-3 py-1 rounded-full text-body-sm font-medium capitalize',
+                typeColors.bg, typeColors.text
+              )}>
+                {wine.wine_type || 'Wine'}
+              </span>
+            </div>
+          )}
+        </motion.div>
 
-          {/* Expandable details */}
-          {(wine.sommelier_notes || wine.tasting_notes || wine.grape_varieties) && (
+        {/* Wine Style Tags */}
+        {wine.wine_style && wine.wine_style.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.07 }}
+            className="flex flex-wrap gap-2"
+          >
+            {wine.wine_style.map((style, i) => (
+              <span
+                key={i}
+                className={cn(
+                  'px-3 py-1 rounded-full text-body-sm border',
+                  typeColors.bg, typeColors.text, 'border-current/30'
+                )}
+              >
+                {style}
+              </span>
+            ))}
+          </motion.div>
+        )}
+
+        {/* Expandable Details Section */}
+        {hasDetailedData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center gap-2 mt-4 text-body-sm text-[var(--wine)] hover:underline"
+              className="flex items-center gap-2 w-full p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-body-md text-[var(--foreground)] hover:border-[var(--wine)] transition-colors"
             >
-              <Info className="h-4 w-4" />
-              {showDetails ? 'Hide details' : 'Show tasting notes'}
+              <Info className="h-5 w-5 text-[var(--wine)]" />
+              <span className="flex-1 text-left font-medium">
+                {showDetails ? 'Hide wine details' : 'Show wine details'}
+              </span>
               {showDetails ? (
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="h-5 w-5 text-[var(--foreground-muted)]" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-5 w-5 text-[var(--foreground-muted)]" />
               )}
             </button>
-          )}
 
-          <AnimatePresence>
-            {showDetails && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <Card variant="outlined" padding="md" className="mt-4">
-                  {wine.sommelier_notes && (
-                    <div className="mb-4">
-                      <h4 className="text-label-sm text-[var(--foreground-muted)] uppercase tracking-wide mb-1">
-                        Sommelier Notes
-                      </h4>
-                      <p className="text-body-md text-[var(--foreground)]">
-                        {wine.sommelier_notes}
-                      </p>
-                    </div>
-                  )}
+            <AnimatePresence>
+              {showDetails && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-3 space-y-4">
+                    {/* Sommelier Notes */}
+                    {wine.sommelier_notes && (
+                      <Card variant="outlined" padding="md">
+                        <p className="text-body-md text-[var(--foreground)] italic">
+                          "{wine.sommelier_notes}"
+                        </p>
+                      </Card>
+                    )}
 
-                  {wine.tasting_notes && (
-                    <div className="space-y-3">
-                      {wine.tasting_notes.aroma && (
-                        <div>
-                          <h4 className="text-label-sm text-[var(--foreground-muted)] uppercase tracking-wide mb-1">
-                            Aroma
+                    {/* Grape Varieties */}
+                    {wine.grape_varieties && wine.grape_varieties.length > 0 && (
+                      <Card variant="outlined" padding="md">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Grape className="h-4 w-4 text-[var(--wine)]" />
+                          <h4 className="text-body-sm font-semibold text-[var(--foreground)]">
+                            Grape Varieties
                           </h4>
-                          <p className="text-body-sm text-[var(--foreground)]">
-                            {wine.tasting_notes.aroma}
-                          </p>
                         </div>
-                      )}
-                      {wine.tasting_notes.taste && (
-                        <div>
-                          <h4 className="text-label-sm text-[var(--foreground-muted)] uppercase tracking-wide mb-1">
-                            Taste
-                          </h4>
-                          <p className="text-body-sm text-[var(--foreground)]">
-                            {wine.tasting_notes.taste}
-                          </p>
+                        <div className="flex flex-wrap gap-2">
+                          {wine.grape_varieties.map((grape, i) => (
+                            <span
+                              key={i}
+                              className="px-3 py-1.5 rounded-lg bg-[var(--background)] text-body-sm text-[var(--foreground)]"
+                            >
+                              {grape.name}
+                              {grape.percentage && (
+                                <span className="text-[var(--foreground-muted)] ml-1">
+                                  {grape.percentage}%
+                                </span>
+                              )}
+                            </span>
+                          ))}
                         </div>
-                      )}
-                      {wine.tasting_notes.finish && (
-                        <div>
-                          <h4 className="text-label-sm text-[var(--foreground-muted)] uppercase tracking-wide mb-1">
-                            Finish
-                          </h4>
-                          <p className="text-body-sm text-[var(--foreground)]">
-                            {wine.tasting_notes.finish}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      </Card>
+                    )}
 
-                  {wine.grape_varieties && wine.grape_varieties.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-[var(--border)]">
-                      <h4 className="text-label-sm text-[var(--foreground-muted)] uppercase tracking-wide mb-2">
-                        Grape Varieties
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {wine.grape_varieties.map((grape, i) => (
-                          <span
-                            key={i}
-                            className="px-2 py-1 rounded-lg bg-[var(--background)] text-body-sm text-[var(--foreground-secondary)]"
-                          >
-                            <Grape className="h-3 w-3 inline mr-1" />
-                            {grape.name}
-                            {grape.percentage && ` (${grape.percentage}%)`}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+                    {/* Tasting Notes */}
+                    {(wine.tasting_notes?.appearance || wine.tasting_notes?.aroma || 
+                      wine.tasting_notes?.taste || wine.tasting_notes?.finish) && (
+                      <Card variant="outlined" padding="md">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Eye className="h-4 w-4 text-[var(--wine)]" />
+                          <h4 className="text-body-sm font-semibold text-[var(--foreground)]">
+                            Tasting Notes
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          {wine.tasting_notes.appearance && (
+                            <div>
+                              <p className="text-body-xs text-[var(--foreground-muted)] uppercase tracking-wide mb-1">
+                                Appearance
+                              </p>
+                              <p className="text-body-sm text-[var(--foreground)]">
+                                {wine.tasting_notes.appearance}
+                              </p>
+                            </div>
+                          )}
+                          {wine.tasting_notes.aroma && (
+                            <div>
+                              <p className="text-body-xs text-[var(--foreground-muted)] uppercase tracking-wide mb-1">
+                                Aroma
+                              </p>
+                              <p className="text-body-sm text-[var(--foreground)]">
+                                {wine.tasting_notes.aroma}
+                              </p>
+                            </div>
+                          )}
+                          {wine.tasting_notes.taste && (
+                            <div>
+                              <p className="text-body-xs text-[var(--foreground-muted)] uppercase tracking-wide mb-1">
+                                Taste
+                              </p>
+                              <p className="text-body-sm text-[var(--foreground)]">
+                                {wine.tasting_notes.taste}
+                              </p>
+                            </div>
+                          )}
+                          {wine.tasting_notes.finish && (
+                            <div>
+                              <p className="text-body-xs text-[var(--foreground-muted)] uppercase tracking-wide mb-1">
+                                Finish
+                              </p>
+                              <p className="text-body-sm text-[var(--foreground)]">
+                                {wine.tasting_notes.finish}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* Food Pairings */}
+                    {wine.food_pairings && wine.food_pairings.length > 0 && (
+                      <Card variant="outlined" padding="md">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Utensils className="h-4 w-4 text-[var(--wine)]" />
+                          <h4 className="text-body-sm font-semibold text-[var(--foreground)]">
+                            Food Pairings
+                          </h4>
+                        </div>
+                        <div className="space-y-2">
+                          {wine.food_pairings.map((pairing, i) => (
+                            <div key={i}>
+                              <p className="text-body-xs text-[var(--foreground-muted)] uppercase tracking-wide">
+                                {pairing.category}
+                              </p>
+                              <p className="text-body-sm text-[var(--foreground)]">
+                                {pairing.items?.join(', ')}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        {wine.food_pairing_notes && (
+                          <p className="mt-3 pt-3 border-t border-[var(--border)] text-body-sm text-[var(--foreground-secondary)] italic">
+                            {wine.food_pairing_notes}
+                          </p>
+                        )}
+                      </Card>
+                    )}
+
+                    {/* Technical Details */}
+                    {(wine.technical_details?.ph || wine.technical_details?.total_acidity ||
+                      wine.technical_details?.residual_sugar || wine.technical_details?.aging ||
+                      wine.technical_details?.production) && (
+                      <Card variant="outlined" padding="md">
+                        <div className="flex items-center gap-2 mb-3">
+                          <FlaskConical className="h-4 w-4 text-[var(--wine)]" />
+                          <h4 className="text-body-sm font-semibold text-[var(--foreground)]">
+                            Technical Details
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          {wine.technical_details.ph && (
+                            <div>
+                              <p className="text-body-xs text-[var(--foreground-muted)]">pH</p>
+                              <p className="text-body-sm text-[var(--foreground)]">{wine.technical_details.ph}</p>
+                            </div>
+                          )}
+                          {wine.technical_details.total_acidity && (
+                            <div>
+                              <p className="text-body-xs text-[var(--foreground-muted)]">Total Acidity</p>
+                              <p className="text-body-sm text-[var(--foreground)]">{wine.technical_details.total_acidity}</p>
+                            </div>
+                          )}
+                          {wine.technical_details.residual_sugar && (
+                            <div>
+                              <p className="text-body-xs text-[var(--foreground-muted)]">Residual Sugar</p>
+                              <p className="text-body-sm text-[var(--foreground)]">{wine.technical_details.residual_sugar}</p>
+                            </div>
+                          )}
+                          {wine.technical_details.aging && (
+                            <div className="col-span-2">
+                              <p className="text-body-xs text-[var(--foreground-muted)]">Aging</p>
+                              <p className="text-body-sm text-[var(--foreground)]">{wine.technical_details.aging}</p>
+                            </div>
+                          )}
+                          {wine.technical_details.production && (
+                            <div className="col-span-2">
+                              <p className="text-body-xs text-[var(--foreground-muted)]">Production</p>
+                              <p className="text-body-sm text-[var(--foreground)]">{wine.technical_details.production}</p>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* Winemaker Notes */}
+                    {wine.winemaker_notes && (
+                      <Card variant="outlined" padding="md">
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="h-4 w-4 text-[var(--wine)]" />
+                          <h4 className="text-body-sm font-semibold text-[var(--foreground)]">
+                            Winemaker Notes
+                          </h4>
+                        </div>
+                        <p className="text-body-sm text-[var(--foreground-secondary)]">
+                          {wine.winemaker_notes}
+                        </p>
+                      </Card>
+                    )}
+
+                    {/* Awards */}
+                    {wine.awards && wine.awards.length > 0 && (
+                      <Card variant="outlined" padding="md">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Award className="h-4 w-4 text-[var(--gold)]" />
+                          <h4 className="text-body-sm font-semibold text-[var(--foreground)]">
+                            Awards & Recognition
+                          </h4>
+                        </div>
+                        <div className="space-y-2">
+                          {wine.awards.map((award, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-[var(--gold)]">🏆</span>
+                              <span className="text-body-sm text-[var(--foreground)]">{award}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
 
         {/* Rating section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.15 }}
         >
           <Card variant="elevated" padding="lg">
             <div className="text-center mb-6">
