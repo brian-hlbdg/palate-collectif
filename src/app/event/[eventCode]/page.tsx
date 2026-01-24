@@ -2,27 +2,35 @@
 
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { Card, Button, Badge } from '@/components/ui'
-import { WineLoader, RatingDisplay } from '@/components/ui'
-import { ThemeToggle } from '@/components/ui'
+import { WineLoader } from '@/components/ui'
+import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import {
   Wine,
+  Star,
   MapPin,
   Calendar,
-  Search,
-  Filter,
-  User,
   ChevronRight,
   Check,
-  Star,
-  Clock,
+  Search,
+  Filter,
+  Sparkles,
+  User,
+  X,
+  Navigation,
+  ShoppingBag,
 } from 'lucide-react'
 
-interface EventDetails {
+// Country flags
+const countryFlags: Record<string, string> = {
+  'France': '🇫🇷', 'Italy': '🇮🇹', 'Spain': '🇪🇸', 'United States': '🇺🇸', 'USA': '🇺🇸',
+  'Germany': '🇩🇪', 'Portugal': '🇵🇹', 'Argentina': '🇦🇷', 'Chile': '🇨🇱', 'Australia': '🇦🇺',
+  'New Zealand': '🇳🇿', 'South Africa': '🇿🇦', 'Austria': '🇦🇹', 'Greece': '🇬🇷',
+}
+
+interface EventData {
   id: string
   event_code: string
   event_name: string
@@ -31,470 +39,561 @@ interface EventDetails {
   description?: string
 }
 
-interface EventWine {
+interface WineData {
   id: string
   wine_name: string
   producer?: string
-  vintage?: string
+  vintage?: number
   wine_type: string
   region?: string
   country?: string
-  tasting_order: number
+  tasting_order?: number
   location_name?: string
-  location_order?: number
+  image_url?: string
 }
 
-interface GroupedWines {
-  location: string | null
-  wines: EventWine[]
+interface UserRating {
+  event_wine_id: string
+  rating: number
+  would_buy: boolean
 }
 
-export default function EventPage() {
+interface LocationGroup {
+  location_name: string
+  location_address?: string
+  wines: WineData[]
+}
+
+export default function EventWinesPage() {
   const params = useParams()
   const router = useRouter()
+  const { addToast } = useToast()
   const eventCode = params.eventCode as string
 
-  const [event, setEvent] = useState<EventDetails | null>(null)
-  const [wines, setWines] = useState<EventWine[]>([])
-  const [userRatings, setUserRatings] = useState<Record<string, number>>({})
+  const [event, setEvent] = useState<EventData | null>(null)
+  const [wines, setWines] = useState<WineData[]>([])
+  const [userRatings, setUserRatings] = useState<Record<string, UserRating>>({})
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [isTempUser, setIsTempUser] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  
+  // Search & filter
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [filterType, setFilterType] = useState<string | null>(null)
+  const [showEventModal, setShowEventModal] = useState(false)
 
-  const userId = typeof window !== 'undefined'
-    ? localStorage.getItem('palate-temp-user')
-    : null
+  // Check user
+  const checkUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      setIsTempUser(false)
+      setUserId(session.user.id)
+      return session.user.id
+    }
+    const tempId = localStorage.getItem('palate-temp-user')
+    if (tempId) {
+      setIsTempUser(true)
+      setUserId(tempId)
+    }
+    return tempId
+  }
 
-  // Load event and wines
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load event by event_code
-        const { data: eventData, error: eventError } = await supabase
-          .from('tasting_events')
-          .select('id, event_code, event_name, event_date, location, description, is_active, is_deleted')
-          .eq('event_code', eventCode.toUpperCase())
-          .single()
+    if (eventCode) {
+      loadData()
+    }
+  }, [eventCode])
 
-        if (eventError || !eventData) {
-          setError('Event not found')
-          return
+  const loadData = async () => {
+    const currentUserId = await checkUser()
+    if (!currentUserId) {
+      router.push('/join')
+      return
+    }
+
+    try {
+      // Load event by code
+      const { data: eventData, error: eventError } = await supabase
+        .from('tasting_events')
+        .select('*')
+        .eq('event_code', eventCode)
+        .single()
+
+      if (eventError) throw eventError
+      setEvent(eventData)
+
+      // Load wines
+      const { data: wineData, error: wineError } = await supabase
+        .from('event_wines')
+        .select('*')
+        .eq('event_id', eventData.id)
+        .order('tasting_order', { ascending: true })
+
+      if (wineError) throw wineError
+      setWines(wineData || [])
+
+      // Load user ratings
+      if (wineData && wineData.length > 0) {
+        const wineIds = wineData.map(w => w.id)
+        const { data: ratings } = await supabase
+          .from('user_wine_ratings')
+          .select('event_wine_id, rating, would_buy')
+          .eq('user_id', currentUserId)
+          .in('event_wine_id', wineIds)
+
+        if (ratings) {
+          const ratingsMap: Record<string, UserRating> = {}
+          ratings.forEach(r => {
+            ratingsMap[r.event_wine_id] = r
+          })
+          setUserRatings(ratingsMap)
         }
+      }
+    } catch (err) {
+      console.error('Error loading event:', err)
+      addToast({ type: 'error', message: 'Failed to load event' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-        if (!eventData.is_active || eventData.is_deleted) {
-          setError('This event is no longer active')
-          return
-        }
+  // Group wines by location
+  const groupedWines = (): LocationGroup[] => {
+    const locations = new Map<string, WineData[]>()
+    const unassigned: WineData[] = []
 
-        setEvent(eventData)
+    // Filter wines based on search and type filter
+    const filteredWines = wines.filter(wine => {
+      const matchesSearch = !searchQuery || 
+        wine.wine_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        wine.producer?.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesType = !filterType || wine.wine_type === filterType
+      return matchesSearch && matchesType
+    })
 
-        // Load wines
-        const { data: winesData } = await supabase
-          .from('event_wines')
-          .select('id, wine_name, producer, vintage, wine_type, region, country, tasting_order, location_name, location_order')
-          .eq('event_id', eventData.id)
-          .order('location_order', { ascending: true, nullsFirst: false })
-          .order('tasting_order', { ascending: true })
+    filteredWines.forEach(wine => {
+      if (wine.location_name) {
+        const existing = locations.get(wine.location_name) || []
+        existing.push(wine)
+        locations.set(wine.location_name, existing)
+      } else {
+        unassigned.push(wine)
+      }
+    })
 
-        if (winesData) {
-          setWines(winesData)
-        }
-
-        // Load user's ratings
-        if (userId) {
-          const { data: ratingsData } = await supabase
-            .from('user_wine_ratings')
-            .select('event_wine_id, rating')
-            .eq('user_id', userId)
-
-          if (ratingsData) {
-            const ratingsMap: Record<string, number> = {}
-            ratingsData.forEach((r) => {
-              ratingsMap[r.event_wine_id] = r.rating
-            })
-            setUserRatings(ratingsMap)
-          }
-        }
-      } catch (err) {
-        console.error('Error loading data:', err)
-        setError('Failed to load event')
-      } finally {
-        setIsLoading(false)
+    const groups: LocationGroup[] = []
+    
+    if (unassigned.length > 0 && locations.size === 0) {
+      groups.push({ location_name: '', wines: unassigned })
+    } else {
+      locations.forEach((wines, location) => {
+        groups.push({ location_name: location, wines })
+      })
+      if (unassigned.length > 0) {
+        groups.push({ location_name: 'Other Wines', wines: unassigned })
       }
     }
 
-    loadData()
-  }, [eventCode, userId])
-
-  // Get unique wine types for filter
-  const wineTypes = [...new Set(wines.map((w) => w.wine_type))]
-
-  // Filter wines
-  const filteredWines = wines.filter((wine) => {
-    const matchesSearch =
-      !searchQuery ||
-      wine.wine_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      wine.producer?.toLowerCase().includes(searchQuery.toLowerCase())
-
-    const matchesType = !filterType || wine.wine_type === filterType
-
-    return matchesSearch && matchesType
-  })
-
-  // Group wines by location
-  const groupedWines: GroupedWines[] = React.useMemo(() => {
-    const groups: Record<string, EventWine[]> = {}
-    
-    filteredWines.forEach((wine) => {
-      const location = wine.location_name || 'All Wines'
-      if (!groups[location]) {
-        groups[location] = []
-      }
-      groups[location].push(wine)
-    })
-
-    // Sort by location_order
-    return Object.entries(groups)
-      .sort(([, a], [, b]) => {
-        const aOrder = a[0]?.location_order ?? 999
-        const bOrder = b[0]?.location_order ?? 999
-        return aOrder - bOrder
-      })
-      .map(([location, wines]) => ({
-        location: location === 'All Wines' ? null : location,
-        wines,
-      }))
-  }, [filteredWines])
+    return groups
+  }
 
   // Stats
   const totalWines = wines.length
-  const ratedWines = Object.keys(userRatings).length
-  const progress = totalWines > 0 ? (ratedWines / totalWines) * 100 : 0
+  const ratedCount = Object.keys(userRatings).length
+  const progressPercent = totalWines > 0 ? (ratedCount / totalWines) * 100 : 0
+  const isWineCrawl = wines.some(w => w.location_name)
 
-  // Loading state
+  // Get unique wine types for filter
+  const wineTypes = [...new Set(wines.map(w => w.wine_type).filter(Boolean))]
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
         <WineLoader />
       </div>
     )
   }
 
-  // Error state
-  if (error) {
+  if (!event) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)] p-4">
-        <Card variant="outlined" padding="lg" className="max-w-md w-full text-center">
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-center">
           <Wine className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
-          <h1 className="text-display-sm font-bold text-[var(--foreground)] mb-2">
-            {error}
-          </h1>
-          <p className="text-body-md text-[var(--foreground-secondary)] mb-6">
-            Please check the event code and try again
+          <p className="text-body-md text-[var(--foreground-secondary)]">
+            Event not found
           </p>
-          <Button onClick={() => router.push('/join')}>
-            Back to Join
-          </Button>
-        </Card>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-[var(--surface)]/80 backdrop-blur-xl border-b border-[var(--border)]">
-        <div className="px-4 py-4">
-          {/* Event info */}
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="wine" size="sm">{event?.event_code}</Badge>
-              </div>
-              <h1 className="text-body-lg font-bold text-[var(--foreground)] truncate">
-                {event?.event_name}
-              </h1>
-              <div className="flex items-center gap-3 mt-1 text-body-sm text-[var(--foreground-secondary)]">
-                {event?.event_date && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(event.event_date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </span>
-                )}
-                {event?.location && (
-                  <span className="flex items-center gap-1 truncate">
-                    <MapPin className="h-4 w-4" />
-                    {event.location}
-                  </span>
-                )}
-              </div>
-            </div>
+      {/* Compact Header - Matching Original */}
+      <header className="bg-[var(--surface)] border-b border-[var(--border)] p-4 sticky top-0 z-20">
+        <div className="max-w-2xl mx-auto">
+          {/* Top row: Event code badge and actions */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="px-2 py-0.5 bg-[var(--wine-muted)] text-[var(--wine)] text-body-xs font-mono rounded">
+              {event.event_code}
+            </span>
             <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <Link
-                href={`/event/${eventCode}/profile`}
-                className={cn(
-                  'p-2 rounded-xl',
-                  'bg-[var(--wine-muted)]',
-                  'text-[var(--wine)]',
-                  'hover:bg-[var(--wine)] hover:text-white',
-                  'transition-colors duration-200'
-                )}
-              >
+              {/* Dark mode toggle placeholder */}
+              <button className="p-2 rounded-lg text-[var(--foreground-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-colors">
                 <User className="h-5 w-5" />
-              </Link>
+              </button>
             </div>
+          </div>
+
+          {/* Event name */}
+          <h1 className="text-lg font-bold text-[var(--foreground)] mb-1">
+            {event.event_name}
+          </h1>
+
+          {/* Date and location */}
+          <div className="flex items-center gap-4 text-body-sm text-[var(--foreground-secondary)]">
+            {event.event_date && (
+              <div className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                <span>{new Date(event.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              </div>
+            )}
+            {event.location && (
+              <div className="flex items-center gap-1">
+                <MapPin className="h-4 w-4" />
+                <span>{event.location}</span>
+              </div>
+            )}
+            {isWineCrawl && (
+              <div className="flex items-center gap-1 text-[var(--wine)]">
+                <Navigation className="h-4 w-4" />
+                <span>Wine Crawl</span>
+              </div>
+            )}
           </div>
 
           {/* Progress bar */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-2 bg-[var(--border)] rounded-full overflow-hidden">
-              <motion.div
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex-1 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+              <motion.div 
                 className="h-full bg-[var(--wine)] rounded-full"
                 initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 0.5 }}
               />
             </div>
-            <span className="text-body-sm font-medium text-[var(--foreground-secondary)]">
-              {ratedWines}/{totalWines}
+            <span className="text-body-xs text-[var(--foreground-muted)] whitespace-nowrap">
+              {ratedCount}/{totalWines}
             </span>
           </div>
         </div>
+      </header>
 
-        {/* Search and filter */}
-        <div className="px-4 pb-4 flex gap-2">
+      {/* Search and Filter Bar */}
+      <div className="bg-[var(--surface)] border-b border-[var(--border)] px-4 py-3">
+        <div className="max-w-2xl mx-auto flex items-center gap-3">
+          {/* Search input */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground-muted)]" />
             <input
               type="text"
-              placeholder="Search wines..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search wines..."
               className={cn(
                 'w-full pl-10 pr-4 py-2.5 rounded-xl',
                 'bg-[var(--background)] border border-[var(--border)]',
-                'text-body-md text-[var(--foreground)]',
+                'text-body-sm text-[var(--foreground)]',
                 'placeholder:text-[var(--foreground-muted)]',
                 'focus:outline-none focus:border-[var(--wine)]',
-                'transition-colors duration-200'
+                'transition-colors'
               )}
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
+          
+          {/* Filter button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              'px-4 py-2.5 rounded-xl border',
-              'transition-colors duration-200',
+              'p-2.5 rounded-xl border transition-colors',
               showFilters || filterType
                 ? 'bg-[var(--wine-muted)] border-[var(--wine)] text-[var(--wine)]'
-                : 'bg-[var(--background)] border-[var(--border)] text-[var(--foreground-secondary)]'
+                : 'bg-[var(--background)] border-[var(--border)] text-[var(--foreground-secondary)] hover:text-[var(--foreground)]'
             )}
           >
             <Filter className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Filter pills */}
+        {/* Filter options */}
         <AnimatePresence>
-          {showFilters && (
+          {showFilters && wineTypes.length > 0 && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
+              className="max-w-2xl mx-auto overflow-hidden"
             >
-              <div className="px-4 pb-4 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-3">
                 <button
                   onClick={() => setFilterType(null)}
                   className={cn(
-                    'px-3 py-1.5 rounded-full text-body-sm font-medium',
-                    'transition-colors duration-200',
+                    'px-3 py-1.5 rounded-full text-body-xs transition-colors',
                     !filterType
                       ? 'bg-[var(--wine)] text-white'
-                      : 'bg-[var(--background)] border border-[var(--border)] text-[var(--foreground-secondary)]'
+                      : 'bg-[var(--background)] text-[var(--foreground-secondary)] hover:text-[var(--foreground)]'
                   )}
                 >
                   All
                 </button>
-                {wineTypes.map((type) => (
+                {wineTypes.map(type => (
                   <button
                     key={type}
-                    onClick={() => setFilterType(type)}
+                    onClick={() => setFilterType(filterType === type ? null : type)}
                     className={cn(
-                      'px-3 py-1.5 rounded-full text-body-sm font-medium',
-                      'transition-colors duration-200',
+                      'px-3 py-1.5 rounded-full text-body-xs capitalize transition-colors',
                       filterType === type
                         ? 'bg-[var(--wine)] text-white'
-                        : 'bg-[var(--background)] border border-[var(--border)] text-[var(--foreground-secondary)]'
+                        : 'bg-[var(--background)] text-[var(--foreground-secondary)] hover:text-[var(--foreground)]'
                     )}
                   >
-                    {getWineEmoji(type)} {type}
+                    {type}
                   </button>
                 ))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </header>
+      </div>
 
-      {/* Wine list */}
-      <main className="p-4 pb-24">
-        {filteredWines.length === 0 ? (
+      {/* Wine List */}
+      <main className="p-4 pb-24 max-w-2xl mx-auto">
+        {wines.length === 0 ? (
           <div className="text-center py-12">
             <Wine className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
-            <p className="text-body-lg text-[var(--foreground-secondary)]">
-              {searchQuery || filterType
-                ? 'No wines match your search'
-                : 'No wines available yet'}
+            <h3 className="text-body-lg font-semibold text-[var(--foreground)] mb-2">
+              No Wines Yet
+            </h3>
+            <p className="text-body-md text-[var(--foreground-secondary)]">
+              The event organizer hasn't added any wines yet.
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {groupedWines.map((group, groupIndex) => (
-              <div key={group.location || 'all'}>
-                {/* Location header */}
-                {group.location && (
-                  <div className="flex items-center gap-2 mb-3">
+            {groupedWines().map((group) => (
+              <div key={group.location_name || 'main'}>
+                {/* Location header for wine crawls */}
+                {group.location_name && (
+                  <div className="flex items-center gap-2 mb-3 px-1">
                     <MapPin className="h-4 w-4 text-[var(--wine)]" />
-                    <h2 className="text-body-md font-semibold text-[var(--foreground)]">
-                      {group.location}
+                    <h2 className="text-body-sm font-semibold text-[var(--foreground)]">
+                      {group.location_name}
                     </h2>
-                    <span className="text-body-sm text-[var(--foreground-muted)]">
+                    <span className="text-body-xs text-[var(--foreground-muted)]">
                       ({group.wines.length})
                     </span>
                   </div>
                 )}
 
-                {/* Wines in this location */}
+                {/* Wine cards */}
                 <div className="space-y-3">
-                  {group.wines.map((wine, index) => (
-                    <motion.div
-                      key={wine.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: (groupIndex * group.wines.length + index) * 0.03 }}
-                    >
-                      <WineCard
-                        wine={wine}
-                        userRating={userRatings[wine.id]}
+                  {group.wines.map((wine, index) => {
+                    const rating = userRatings[wine.id]
+                    const isRated = !!rating
+                    const flag = wine.country ? countryFlags[wine.country] : null
+
+                    return (
+                      <motion.button
+                        key={wine.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
                         onClick={() => router.push(`/event/${eventCode}/wine/${wine.id}`)}
-                      />
-                    </motion.div>
-                  ))}
+                        className={cn(
+                          'w-full text-left',
+                          'bg-[var(--surface)] border rounded-xl p-4',
+                          'transition-all duration-200',
+                          isRated
+                            ? 'border-[var(--wine)]/30'
+                            : 'border-[var(--border)] hover:border-[var(--foreground-muted)]'
+                        )}
+                      >
+                        <div className="flex items-center gap-4">
+                          {/* Wine emoji/image */}
+                          <div className={cn(
+                            'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl',
+                            getWineTypeBg(wine.wine_type)
+                          )}>
+                            {wine.image_url ? (
+                              <img
+                                src={wine.image_url}
+                                alt={wine.wine_name}
+                                className="w-full h-full object-cover rounded-xl"
+                              />
+                            ) : (
+                              getWineEmoji(wine.wine_type)
+                            )}
+                          </div>
+
+                          {/* Wine info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {wine.tasting_order && (
+                                <span className="text-body-xs text-[var(--foreground-muted)]">
+                                  #{wine.tasting_order}
+                                </span>
+                              )}
+                              <h3 className="text-body-md font-semibold text-[var(--foreground)] truncate">
+                                {wine.wine_name}
+                              </h3>
+                            </div>
+                            <p className="text-body-sm text-[var(--foreground-secondary)] truncate">
+                              {[wine.producer, wine.vintage].filter(Boolean).join(' · ')}
+                            </p>
+                            {(flag || wine.region) && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {flag && <span className="text-sm">{flag}</span>}
+                                {wine.region && (
+                                  <span className="text-body-xs text-[var(--foreground-muted)]">
+                                    {wine.region}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Rating status */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {isRated ? (
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-4 w-4 fill-[var(--wine)] text-[var(--wine)]" />
+                                  <span className="text-body-sm font-medium text-[var(--foreground)]">
+                                    {rating.rating}
+                                  </span>
+                                </div>
+                                {rating.would_buy && (
+                                  <ShoppingBag className="h-4 w-4 text-[var(--wine)]" />
+                                )}
+                                <Check className="h-5 w-5 text-[var(--wine)]" />
+                              </div>
+                            ) : (
+                              <ChevronRight className="h-5 w-5 text-[var(--foreground-muted)]" />
+                            )}
+                          </div>
+                        </div>
+                      </motion.button>
+                    )
+                  })}
                 </div>
               </div>
             ))}
+
+            {/* No results from search/filter */}
+            {groupedWines().length === 0 && wines.length > 0 && (
+              <div className="text-center py-8">
+                <p className="text-body-md text-[var(--foreground-secondary)]">
+                  No wines match your search
+                </p>
+                <button
+                  onClick={() => { setSearchQuery(''); setFilterType(null); }}
+                  className="mt-2 text-body-sm text-[var(--wine)] hover:underline"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
 
-      {/* Bottom action bar */}
-      {ratedWines > 0 && ratedWines < totalWines && (
-        <motion.div
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          className="fixed bottom-0 left-0 right-0 p-4 bg-[var(--surface)] border-t border-[var(--border)]"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-body-sm text-[var(--foreground)]">
-                <span className="font-semibold">{ratedWines}</span> of {totalWines} wines rated
-              </p>
-              <p className="text-body-xs text-[var(--foreground-muted)]">
-                Keep going!
-              </p>
-            </div>
-            <Button
-              onClick={() => {
-                const unratedWine = wines.find((w) => !userRatings[w.id])
-                if (unratedWine) {
-                  router.push(`/event/${eventCode}/wine/${unratedWine.id}`)
-                }
-              }}
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)] z-30">
+        <div className="max-w-2xl mx-auto flex items-center justify-around py-2 px-4 safe-area-inset-bottom">
+          <button
+            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[var(--wine)]"
+          >
+            <Wine className="h-5 w-5" />
+            <span className="text-body-xs font-medium">Wines</span>
+          </button>
+          
+          <button
+            onClick={() => router.push('/recommendations')}
+            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
+          >
+            <Sparkles className="h-5 w-5" />
+            <span className="text-body-xs">For You</span>
+          </button>
+          
+          <button
+            onClick={() => router.push(`/event/${eventCode}/profile`)}
+            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
+          >
+            <User className="h-5 w-5" />
+            <span className="text-body-xs">Profile</span>
+          </button>
+
+          {isTempUser && (
+            <button
+              onClick={() => router.push('/convert')}
+              className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
             >
-              Continue
-            </Button>
-          </div>
-        </motion.div>
-      )}
+              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--wine)] animate-pulse" />
+              <User className="h-5 w-5" />
+              <span className="text-body-xs font-medium">Save</span>
+            </button>
+          )}
+        </div>
+      </nav>
+
+      {/* Event Description Modal */}
+      <AnimatePresence>
+        {showEventModal && event.description && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+            onClick={() => setShowEventModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[var(--surface)] rounded-2xl p-6 max-w-md w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-lg font-bold text-[var(--foreground)] mb-2">
+                {event.event_name}
+              </h2>
+              <p className="text-body-md text-[var(--foreground-secondary)]">
+                {event.description}
+              </p>
+              <button
+                onClick={() => setShowEventModal(false)}
+                className="mt-4 w-full py-2 bg-[var(--wine)] text-white rounded-xl font-medium"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
-// Wine card component
-function WineCard({
-  wine,
-  userRating,
-  onClick,
-}: {
-  wine: EventWine
-  userRating?: number
-  onClick: () => void
-}) {
-  const isRated = userRating !== undefined
-
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'w-full text-left',
-        'p-4 rounded-2xl',
-        'bg-[var(--surface)] border',
-        'transition-all duration-200',
-        isRated
-          ? 'border-[var(--wine)]/30 bg-[var(--wine-muted)]/30'
-          : 'border-[var(--border)] hover:border-[var(--border-secondary)]',
-        'hover:shadow-[var(--shadow-elevation-1)]',
-        'active:scale-[0.99]'
-      )}
-    >
-      <div className="flex items-center gap-4">
-        {/* Wine type indicator */}
-        <div
-          className={cn(
-            'w-12 h-12 rounded-xl flex items-center justify-center text-2xl',
-            isRated ? 'bg-[var(--wine)]/20' : 'bg-[var(--background)]'
-          )}
-        >
-          {isRated ? (
-            <Check className="h-6 w-6 text-[var(--wine)]" />
-          ) : (
-            getWineEmoji(wine.wine_type)
-          )}
-        </div>
-
-        {/* Wine info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-body-xs text-[var(--foreground-muted)]">
-              #{wine.tasting_order}
-            </span>
-            {isRated && <RatingDisplay value={userRating!} size="sm" />}
-          </div>
-          <h3 className="text-body-md font-medium text-[var(--foreground)] truncate">
-            {wine.wine_name}
-          </h3>
-          <p className="text-body-sm text-[var(--foreground-secondary)] truncate">
-            {[wine.producer, wine.vintage].filter(Boolean).join(' · ')}
-          </p>
-        </div>
-
-        {/* Arrow */}
-        <ChevronRight className="h-5 w-5 text-[var(--foreground-muted)] flex-shrink-0" />
-      </div>
-    </button>
-  )
-}
-
-// Helper function
-function getWineEmoji(wineType: string): string {
+// Helper functions
+function getWineEmoji(wineType: string | null | undefined): string {
   const emojiMap: Record<string, string> = {
     red: '🍷',
     white: '🥂',
@@ -504,5 +603,18 @@ function getWineEmoji(wineType: string): string {
     fortified: '🥃',
     orange: '🍊',
   }
-  return emojiMap[wineType?.toLowerCase()] || '🍷'
+  return emojiMap[wineType?.toLowerCase() || 'red'] || '🍷'
+}
+
+function getWineTypeBg(wineType: string | null | undefined): string {
+  const bgMap: Record<string, string> = {
+    red: 'bg-red-900/20',
+    white: 'bg-yellow-900/20',
+    rosé: 'bg-pink-900/20',
+    sparkling: 'bg-amber-900/20',
+    dessert: 'bg-orange-900/20',
+    fortified: 'bg-amber-900/20',
+    orange: 'bg-orange-900/20',
+  }
+  return bgMap[wineType?.toLowerCase() || 'red'] || 'bg-red-900/20'
 }
