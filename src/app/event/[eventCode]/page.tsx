@@ -18,10 +18,14 @@ import {
   Filter,
   Sparkles,
   User,
+  Users,
   X,
   Navigation,
   ShoppingBag,
+  Trophy,
 } from 'lucide-react'
+import { BuddyConnect } from '@/components/BuddyConnect'
+import { isEventClosed, getEventBuddies } from '@/lib/buddies'
 
 // Country flags
 const countryFlags: Record<string, string> = {
@@ -82,6 +86,11 @@ export default function EventWinesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [filterType, setFilterType] = useState<string | null>(null)
   const [showEventModal, setShowEventModal] = useState(false)
+  
+  // Buddies
+  const [showBuddiesPanel, setShowBuddiesPanel] = useState(false)
+  const [eventClosed, setEventClosed] = useState(false)
+  const [buddyCount, setBuddyCount] = useState(0)
 
   // Check user
   const checkUser = async () => {
@@ -122,6 +131,14 @@ export default function EventWinesPage() {
 
       if (eventError) throw eventError
       setEvent(eventData)
+
+      // Check if event is closed (for showing results)
+      const closed = await isEventClosed(eventData.id)
+      setEventClosed(closed)
+
+      // Load buddy count
+      const buddies = await getEventBuddies(currentUserId, eventData.id)
+      setBuddyCount(buddies.length)
 
       // Load wines
       const { data: wineData, error: wineError } = await supabase
@@ -520,23 +537,49 @@ export default function EventWinesPage() {
       <nav className="fixed bottom-0 left-0 right-0 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)] z-30">
         <div className="max-w-2xl mx-auto flex items-center justify-around py-2 px-4 safe-area-inset-bottom">
           <button
-            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[var(--wine)]"
+            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--wine)]"
           >
             <Wine className="h-5 w-5" />
             <span className="text-body-xs font-medium">Wines</span>
           </button>
           
+          {/* Buddies Button */}
           <button
-            onClick={() => router.push('/recommendations')}
-            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
+            onClick={() => setShowBuddiesPanel(true)}
+            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors relative"
           >
-            <Sparkles className="h-5 w-5" />
-            <span className="text-body-xs">For You</span>
+            <Users className="h-5 w-5" />
+            <span className="text-body-xs">Buddies</span>
+            {buddyCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-[var(--wine)] text-white text-[10px] font-bold flex items-center justify-center">
+                {buddyCount}
+              </span>
+            )}
           </button>
+
+          {/* Results Button (shows after event closes) */}
+          {eventClosed ? (
+            <button
+              onClick={() => router.push(`/event/${eventCode}/results`)}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
+            >
+              <Trophy className="h-5 w-5" />
+              <span className="text-body-xs font-medium">Results</span>
+              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--wine)] animate-pulse" />
+            </button>
+          ) : (
+            <button
+              onClick={() => router.push('/recommendations')}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
+            >
+              <Sparkles className="h-5 w-5" />
+              <span className="text-body-xs">For You</span>
+            </button>
+          )}
           
           <button
             onClick={() => router.push(`/event/${eventCode}/profile`)}
-            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
+            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
           >
             <User className="h-5 w-5" />
             <span className="text-body-xs">Profile</span>
@@ -545,7 +588,7 @@ export default function EventWinesPage() {
           {isTempUser && (
             <button
               onClick={() => router.push('/convert')}
-              className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
             >
               <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--wine)] animate-pulse" />
               <User className="h-5 w-5" />
@@ -584,6 +627,59 @@ export default function EventWinesPage() {
               >
                 Close
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Buddies Panel */}
+      <AnimatePresence>
+        {showBuddiesPanel && userId && event && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60"
+            onClick={() => setShowBuddiesPanel(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="absolute bottom-0 left-0 right-0 bg-[var(--background)] rounded-t-3xl max-h-[85vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Handle */}
+              <div className="sticky top-0 bg-[var(--background)] pt-3 pb-2 flex justify-center">
+                <div className="w-10 h-1 rounded-full bg-[var(--border)]" />
+              </div>
+              
+              {/* Header */}
+              <div className="px-4 pb-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-[var(--foreground)]">
+                  Tasting Buddies
+                </h2>
+                <button
+                  onClick={() => setShowBuddiesPanel(false)}
+                  className="p-2 rounded-full text-[var(--foreground-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="px-4 pb-8">
+                <BuddyConnect
+                  userId={userId}
+                  eventId={event.id}
+                  eventName={event.event_name}
+                  eventDate={event.event_date}
+                  onConnect={(buddyName) => {
+                    setBuddyCount(prev => prev + 1)
+                  }}
+                />
+              </div>
             </motion.div>
           </motion.div>
         )}
