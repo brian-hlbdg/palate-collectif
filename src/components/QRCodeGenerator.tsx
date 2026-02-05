@@ -14,6 +14,7 @@ import {
   Smartphone,
   Monitor,
 } from 'lucide-react'
+import Image from 'next/image'
 
 interface QRCodeGeneratorProps {
   eventCode: string
@@ -110,11 +111,12 @@ export function QRCodeGenerator({ eventCode, eventName, isBoothMode }: QRCodeGen
           <div className="flex justify-center">
             <div className="p-4 bg-white rounded-2xl shadow-lg">
               {qrDataUrl ? (
-                <img
+                <Image
                   src={qrDataUrl}
                   alt={`QR Code for ${eventName}`}
                   className="mx-auto"
-                  style={{ width: sizes[size], height: sizes[size] }}
+                  width={sizes[size]}
+                  height={sizes[size]}
                 />
               ) : (
                 <div

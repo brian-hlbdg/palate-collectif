@@ -7,6 +7,7 @@ import { Modal, Button } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { Wine, Save, Grape, Utensils, Eye, FlaskConical, Award, Plus, X } from 'lucide-react'
+import Image from 'next/image'
 
 interface WineFormData {
   id?: string
@@ -357,11 +358,13 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
                     />
                     {wine.image_url && (
                       <div className="mt-2 flex items-center gap-3">
-                        <img 
+                        <Image
                           src={wine.image_url} 
                           alt="Preview" 
                           className="h-16 w-16 object-cover rounded-lg border border-[var(--border)]" 
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} 
+                          width={64}
+                          height={64} 
                         />
                         <span className="text-body-xs text-[var(--foreground-muted)]">Preview</span>
                       </div>

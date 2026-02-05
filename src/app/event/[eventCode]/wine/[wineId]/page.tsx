@@ -27,6 +27,7 @@ import {
   Droplets,
   FileText,
 } from 'lucide-react'
+import Image from 'next/image'
 
 // Country flags mapping
 const countryFlags: Record<string, string> = {
@@ -339,10 +340,12 @@ export default function WineDetailPage() {
         >
           {wine.image_url ? (
             <div className="relative h-64 rounded-2xl overflow-hidden">
-              <img
+              <Image
                 src={wine.image_url}
                 alt={wine.wine_name}
                 className="w-full h-full object-cover"
+                width={256}
+                height={256}
               />
               {/* Gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />

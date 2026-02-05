@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
+import Image from 'next/image'
 
 // Country flags
 const countryFlags: Record<string, string> = {
@@ -159,10 +160,12 @@ export function VirtualWineCard({
           {/* Event/Brand Logo */}
           {branding?.logo_url && (
             <div className="absolute top-4 left-4">
-              <img
+              <Image
                 src={branding.logo_url}
                 alt="Event logo"
                 className="h-8 object-contain"
+                width={32}
+                height={32}
               />
             </div>
           )}
@@ -178,10 +181,12 @@ export function VirtualWineCard({
           <div className="flex justify-center mb-4">
             {wine.image_url ? (
               <div className="w-32 h-40 rounded-2xl overflow-hidden shadow-lg ring-4 ring-white/20">
-                <img
+                <Image
                   src={wine.image_url}
                   alt={wine.wine_name}
                   className="w-full h-full object-cover"
+                  width={128}
+                  height={160}
                 />
               </div>
             ) : (

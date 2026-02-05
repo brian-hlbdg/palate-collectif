@@ -4,6 +4,7 @@ import React from 'react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui'
 import { Wine, MapPin, Grape, Utensils, Eye, FlaskConical, Award, FileText, Star, Droplets } from 'lucide-react'
+import Image from 'next/image'
 
 const countryFlags: Record<string, string> = {
   'France': '🇫🇷', 'Italy': '🇮🇹', 'Spain': '🇪🇸', 'United States': '🇺🇸', 'USA': '🇺🇸',
@@ -44,7 +45,7 @@ export function WineDetailCard({ wine, rating, showFullDetails = false, classNam
       <div className="relative">
         <div className={cn('h-48 flex items-center justify-center', typeColors.bg)}>
           {wine.image_url ? (
-            <img src={wine.image_url} alt={wine.wine_name} className="h-full w-full object-cover" />
+            <Image src={wine.image_url} alt={wine.wine_name} className="h-full w-full object-cover" />
           ) : (
             <div className="text-center">
               <span className="text-6xl">{getWineEmoji(wine.wine_type)}</span>

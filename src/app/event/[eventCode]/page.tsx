@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { BuddyConnect } from '@/components/BuddyConnect'
 import { isEventClosed, getEventBuddies } from '@/lib/buddies'
+import Image from 'next/image'
 
 // Country flags
 const countryFlags: Record<string, string> = {
@@ -451,10 +452,12 @@ export default function EventWinesPage() {
                             getWineTypeBg(wine.wine_type)
                           )}>
                             {wine.image_url ? (
-                              <img
+                              <Image
                                 src={wine.image_url}
                                 alt={wine.wine_name}
                                 className="w-full h-full object-cover rounded-xl"
+                                width={64}
+                                height={64} 
                               />
                             ) : (
                               getWineEmoji(wine.wine_type)

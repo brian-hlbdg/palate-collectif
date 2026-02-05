@@ -25,6 +25,7 @@ import {
   Star,
   GripVertical,
 } from 'lucide-react'
+import Image from 'next/image'
 
 interface EventData {
   id: string
@@ -288,7 +289,7 @@ export default function AdminEventPage() {
           <Button
             variant="secondary"
             leftIcon={<Edit className="h-4 w-4" />}
-            onClick={() => router.push(`/admin/events/${eventId}/edit`)}
+            onClick={() => router.push(`/admin/events/${eventId}/edit` as any)}
           >
             Edit Event
           </Button>
@@ -372,7 +373,7 @@ export default function AdminEventPage() {
                         getWineTypeBg(wine.wine_type)
                       )}>
                         {wine.image_url ? (
-                          <img src={wine.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                          <Image src={wine.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
                         ) : (
                           getWineEmoji(wine.wine_type)
                         )}

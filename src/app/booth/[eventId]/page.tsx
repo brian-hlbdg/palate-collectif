@@ -9,6 +9,7 @@ import { WineLoader } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { Wine, Mail, ArrowRight, Sparkles } from 'lucide-react'
+import Image from 'next/image'
 
 interface BoothEvent {
   id: string
@@ -137,7 +138,7 @@ export default function BoothEntryPage() {
       }
 
       // Store user info in localStorage
-      localStorage.setItem('palate-booth-user', userId)
+      localStorage.setItem('palate-temp-user', userId) // Use same key as wine crawl for consistency
       localStorage.setItem('palate-booth-email', trimmedEmail)
       localStorage.setItem('palate-booth-event', event!.id)
 
@@ -232,10 +233,12 @@ export default function BoothEntryPage() {
           {/* Event branding */}
           <div className="text-center mb-8">
             {event?.booth_logo_url ? (
-              <img
+              <Image
                 src={event.booth_logo_url}
                 alt={event.event_name}
                 className="h-16 mx-auto mb-4 object-contain"
+                width={64}
+                height={64} 
               />
             ) : (
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[var(--wine-muted)] mb-4">

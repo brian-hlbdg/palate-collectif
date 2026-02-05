@@ -24,6 +24,7 @@ import {
   Star,
   ShoppingBag,
 } from 'lucide-react'
+import Image from 'next/image'
 
 // Country flags
 const countryFlags: Record<string, string> = {
@@ -292,10 +293,12 @@ export function WineRecommendations({
                 >
                   {/* Wine Image or Emoji */}
                   {wine.image_url ? (
-                    <img
+                    <Image
                       src={wine.image_url}
                       alt={wine.wine_name}
                       className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                      width={64}
+                      height={64}
                     />
                   ) : (
                     <div className={cn(

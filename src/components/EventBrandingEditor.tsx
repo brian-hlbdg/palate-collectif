@@ -7,7 +7,6 @@ import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import {
   Palette,
-  Image,
   Type,
   Layout,
   Eye,
@@ -16,6 +15,7 @@ import {
   Smartphone,
   Monitor,
 } from 'lucide-react'
+import Image from 'next/image'
 
 export interface EventBranding {
   logo_url?: string
@@ -170,7 +170,13 @@ export function EventBrandingEditor({
           {/* Logo & Banner */}
           <Card variant="outlined" padding="lg">
             <h3 className="text-body-lg font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
-              <Image className="h-5 w-5" />
+              <Image
+                src="/path/to/logo.png"
+                alt="Logo"
+                className="h-5 w-5"
+                height={20}
+                width={20}
+              />
               Logo & Images
             </h3>
             
@@ -186,11 +192,13 @@ export function EventBrandingEditor({
                 />
                 {branding.logo_url && (
                   <div className="mt-2 p-2 bg-[var(--surface)] rounded-lg inline-block">
-                    <img
+                    <Image
                       src={branding.logo_url}
                       alt="Logo preview"
                       className="h-12 object-contain"
                       onError={(e) => (e.currentTarget.style.display = 'none')}
+                      width={64}
+                      height={64} 
                     />
                   </div>
                 )}
@@ -207,11 +215,13 @@ export function EventBrandingEditor({
                 />
                 {branding.banner_url && (
                   <div className="mt-2 rounded-lg overflow-hidden">
-                    <img
+                    <Image
                       src={branding.banner_url}
                       alt="Banner preview"
                       className="h-20 w-full object-cover"
                       onError={(e) => (e.currentTarget.style.display = 'none')}
+                      width={256}
+                      height={256}
                     />
                   </div>
                 )}
@@ -653,10 +663,12 @@ export function EventBrandingEditor({
                 {/* Header with logo */}
                 {branding.logo_url && (
                   <div className="flex justify-center mb-6">
-                    <img
+                    <Image
                       src={branding.logo_url}
                       alt="Event logo"
                       className="h-16 object-contain"
+                      width={64}
+                      height={64}
                     />
                   </div>
                 )}
@@ -664,10 +676,12 @@ export function EventBrandingEditor({
                 {/* Banner */}
                 {branding.banner_url && (
                   <div className="rounded-xl overflow-hidden mb-6">
-                    <img
+                    <Image
                       src={branding.banner_url}
                       alt="Event banner"
                       className="w-full h-32 object-cover"
+                      width={256}
+                      height={128}
                     />
                   </div>
                 )}
