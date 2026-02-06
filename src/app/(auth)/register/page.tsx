@@ -203,13 +203,13 @@ export default function RegisterPage() {
       {/* Terms */}
       <p className="mt-4 text-center text-body-sm text-[var(--foreground-muted)]">
         By creating an account, you agree to our{' '}
-        <Link href="/terms" className="text-[var(--wine)] hover:underline">
+        <a href="/terms" className="text-[var(--wine)] hover:underline" target="_blank" rel="noopener noreferrer">
           Terms
-        </Link>{' '}
+        </a>{' '}
         and{' '}
-        <Link href="/privacy" className="text-[var(--wine)] hover:underline">
+        <a href="/privacy" className="text-[var(--wine)] hover:underline" target="_blank" rel="noopener noreferrer">
           Privacy Policy
-        </Link>
+        </a>
       </p>
     </motion.div>
   )
