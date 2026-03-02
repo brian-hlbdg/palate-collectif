@@ -302,13 +302,13 @@ export default function JoinEventPage() {
                 {/* Privacy note */}
                 <p className="mt-4 text-center text-body-sm text-[var(--foreground-muted)]">
                   By joining, you agree to our{' '}
-                  <a href="/terms" className="text-[var(--wine)] hover:underline">
+                  <Link href="/terms" className="text-[var(--wine)] hover:underline">
                     Terms
-                  </a>{' '}
+                  </Link>{' '}
                   and{' '}
-                  <a href="/privacy" className="text-[var(--wine)] hover:underline">
+                  <Link href="/privacy" className="text-[var(--wine)] hover:underline">
                     Privacy Policy
-                  </a>
+                  </Link>
                 </p>
               </motion.div>
             )}
