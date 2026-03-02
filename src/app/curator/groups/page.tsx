@@ -90,8 +90,17 @@ export default function CuratorGroupsPage() {
         .order('name', { ascending: true })
 
       if (error) {
-        console.error('Organizations query error:', error)
-        if (error.code === '42P01') {
+        const code = (error as any).code ?? error.code
+        const message = (error as any).message ?? ''
+        console.error('Organizations query error:', { code, message, raw: JSON.stringify(error) })
+
+        const tableNotFound =
+          code === '42P01' ||
+          message.includes('does not exist') ||
+          message.includes('relation') ||
+          !code // empty error object usually means table missing
+
+        if (tableNotFound) {
           addToast({ type: 'error', message: 'Organizations table not found. Run the migration first.' })
           setOrganizations([])
           setIsLoading(false)
