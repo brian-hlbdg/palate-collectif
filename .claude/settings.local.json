@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint 2>&1)",
+      "Bash(source ~/.nvm/nvm.sh && npm install next@15.5.12 --legacy-peer-deps 2>&1)",
+      "Bash(source ~/.nvm/nvm.sh && npm show @supabase/supabase-js version && npm show @supabase/ssr version)",
+      "Bash(source ~/.nvm/nvm.sh && npm install @supabase/supabase-js@latest @supabase/ssr@latest 2>&1 | tail -10)",
+      "Bash(git add package.json package-lock.json src/app/curator/groups/page.tsx && git commit -m \"update Supabase to 2.98.0, improve groups error logging\n\n- @supabase/supabase-js: 2.39.0 -> 2.98.0\n- @supabase/ssr: 0.1.0 -> 0.8.0\n- Added error logging for organization_members and tasting_events\n  count queries to surface exact failure in browser console\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\" && git push)",
+      "Bash(source ~/.nvm/nvm.sh && node --version && which node)",
+      "Bash(sudo rm /usr/local/bin/node && echo \"Removed successfully\")",
+      "Bash(zsh -c \"source ~/.zshenv && node --version && which npm\")",
+      "Bash(source ~/.nvm/nvm.sh && npm audit fix 2>&1)",
+      "Bash(source ~/.nvm/nvm.sh && cat package.json | grep typescript-eslint && npm show @typescript-eslint/parser version && npm show @typescript-eslint/eslint-plugin version)",
+      "Bash(source ~/.nvm/nvm.sh && npm install eslint-config-next@15.5.12 eslint@latest 2>&1 | tail -10)",
+      "Bash(source ~/.nvm/nvm.sh && npm install eslint-config-next@15.5.12 eslint@latest --legacy-peer-deps 2>&1 | tail -10)",
+      "Bash(source ~/.nvm/nvm.sh && npm audit fix --legacy-peer-deps 2>&1 | tail -15)",
+      "Bash(source ~/.nvm/nvm.sh && npm run build 2>&1 | tail -8)",
+      "Bash(git add package.json package-lock.json && git commit -m \"fix audit vulnerabilities: update eslint-config-next to 15.5.12\n\nUpgrades eslint-config-next from 14.0.4 to 15.5.12 and eslint to latest,\nresolving 3 high severity minimatch ReDoS vulnerabilities in\n@typescript-eslint/parser and @typescript-eslint/typescript-estree.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\" && git push)",
+      "Bash(source ~/.nvm/nvm.sh && npm run lint 2>&1)",
+      "Bash(source ~/.nvm/nvm.sh && npm run build 2>&1 | grep -A5 \"error\\\\|Error\" | head -40)",
+      "Bash(source ~/.nvm/nvm.sh && npm run build 2>&1 | head -30)",
+      "Bash(source ~/.nvm/nvm.sh && cat /Users/hlbdg/palate-collectif/package.json | grep -A10 '\"scripts\"' && echo \"---\" && cat /Users/hlbdg/palate-collectif/package.json | grep '\"next\"')",
+      "Bash(source ~/.nvm/nvm.sh && npm install eslint@^8.57.0 --legacy-peer-deps 2>&1 | tail -8)",
+      "Bash(git add package.json package-lock.json .eslintrc.json && git commit -m \"fix lint setup for Next.js 16\n\n- Replace deprecated 'next lint' script with direct eslint CLI\n- Remove @typescript-eslint/no-unused-vars from .eslintrc.json\n  \\(was causing plugin-not-found error after eslint/typescript-eslint upgrades\\)\n- Downgrade eslint to 8.57.x for .eslintrc.json flat config compatibility\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\" && git push)",
+      "Bash(git add src/app/curator/groups/page.tsx && git commit -m \"fix groups error handling for empty Supabase error object\n\nSupabase returns non-enumerable properties on error objects, causing\nerror.code to be unreadable and bypassing the 42P01 table-not-found check.\nNow reads code/message explicitly and falls back to detecting missing\ntable when the error object is empty.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\" && git push)",
+      "Bash(source ~/.nvm/nvm.sh && grep -rn '\"/terms\"\\\\|\"/privacy\"\\\\|href=\"/terms\"\\\\|href=\"/privacy\"' /Users/hlbdg/palate-collectif/src/ 2>/dev/null)",
+      "Bash(source ~/.nvm/nvm.sh && grep -n -A2 'href=\"/terms\"\\\\|href=\"/privacy\"' /Users/hlbdg/palate-collectif/src/app/join/page.tsx /Users/hlbdg/palate-collectif/src/app/page.tsx)",
+      "Bash(source ~/.nvm/nvm.sh && grep -n -B2 'href=\"/terms\"\\\\|href=\"/privacy\"' /Users/hlbdg/palate-collectif/src/app/page.tsx)",
+      "Bash(source ~/.nvm/nvm.sh && npm run build 2>&1 | head -20)",
+      "Bash(source ~/.nvm/nvm.sh && npm run build 2>&1 | tail -12)",
+      "Bash(git add src/app/join/page.tsx src/app/page.tsx && git commit -m \"$\\(cat <<'EOF'\nfixed link issue with terms and privacy\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)",
+      "Bash(git add src/app/terms/page.tsx src/app/privacy/page.tsx src/app/join/page.tsx src/app/page.tsx && git commit -m \"$\\(cat <<'EOF'\nadd terms and privacy pages, restore Link components\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git add src/app/\\\\\\(auth\\\\\\)/register/page.tsx && git commit -m \"$\\(cat <<'EOF'\nuse Link for terms/privacy in register now that pages exist\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\" && git push)"
+    ]
+  }
+}
