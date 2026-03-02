@@ -39,6 +39,7 @@ export function PastBuddiesPrompt({
 
   useEffect(() => {
     loadPastBuddies()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, eventId])
 
   const loadPastBuddies = async () => {

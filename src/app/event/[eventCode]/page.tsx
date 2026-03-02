@@ -113,6 +113,7 @@ export default function EventWinesPage() {
     if (eventCode) {
       loadData()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventCode])
 
   const loadData = async () => {

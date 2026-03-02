@@ -44,6 +44,7 @@ export function QRCodeGenerator({ eventCode, eventName, isBoothMode }: QRCodeGen
     if (showModal) {
       generateQR()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal, size, eventUrl])
 
   const generateQR = async () => {

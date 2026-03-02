@@ -67,6 +67,7 @@ export function WineRecommendations({
 
   useEffect(() => {
     loadRecommendations()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, eventId])
 
   const loadRecommendations = async () => {

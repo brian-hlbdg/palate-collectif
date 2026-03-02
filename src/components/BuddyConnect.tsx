@@ -55,6 +55,7 @@ export function BuddyConnect({
   useEffect(() => {
     loadBuddyCode()
     loadBuddies()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, eventId])
 
   const loadBuddyCode = async () => {

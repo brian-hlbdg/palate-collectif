@@ -50,6 +50,7 @@ export function AccountConversion({
 
   useEffect(() => {
     loadTempAccountStats()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tempUserId])
 
   const loadTempAccountStats = async () => {

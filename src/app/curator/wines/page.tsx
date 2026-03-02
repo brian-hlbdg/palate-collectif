@@ -84,6 +84,7 @@ export default function CuratorWinesPage() {
   // Load data based on active tab
   useEffect(() => {
     loadData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
   const loadData = async () => {

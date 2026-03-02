@@ -43,6 +43,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     return () => {
       stopCamera()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const startCamera = async () => {

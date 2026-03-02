@@ -87,6 +87,7 @@ export default function AdminEventPage() {
     if (eventId) {
       loadData()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   const loadData = async () => {

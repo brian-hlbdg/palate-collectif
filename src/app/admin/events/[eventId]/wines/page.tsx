@@ -122,6 +122,7 @@ export default function ManageWinesPage() {
     }
 
     loadData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   // Filter wines

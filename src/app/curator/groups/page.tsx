@@ -79,6 +79,7 @@ export default function CuratorGroupsPage() {
 
   useEffect(() => {
     loadOrganizations()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadOrganizations = async () => {

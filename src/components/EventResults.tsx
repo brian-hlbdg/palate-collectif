@@ -41,6 +41,7 @@ export function EventResults({ eventId, eventName, userId }: EventResultsProps) 
 
   useEffect(() => {
     loadResults()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, userId])
 
   const loadResults = async () => {

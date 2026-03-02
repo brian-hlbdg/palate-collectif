@@ -51,6 +51,7 @@ export default function CuratorHealthPage() {
 
   useEffect(() => {
     runHealthChecks()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const runHealthChecks = async () => {
