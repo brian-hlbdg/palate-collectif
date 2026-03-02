@@ -35,7 +35,7 @@ export default function EventResultsPage() {
     const { data: { session } } = await supabase.auth.getSession()
     let currentUserId = session?.user?.id
     if (!currentUserId) {
-      currentUserId = localStorage.getItem('palate-temp-user')
+      currentUserId = localStorage.getItem('palate-temp-user') ?? undefined
     }
     
     if (!currentUserId) {

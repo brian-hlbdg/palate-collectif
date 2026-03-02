@@ -98,7 +98,7 @@ export default function SettingsPage() {
       setProfile({
         ...profile,
         display_name: displayName.trim() || 'Guest',
-        eventbrite_email: email.trim() || null,
+        eventbrite_email: email.trim() || undefined,
       })
 
       addToast({

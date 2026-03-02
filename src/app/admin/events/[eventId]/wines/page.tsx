@@ -482,13 +482,15 @@ function WineModal({
         }
       } else if (masterWineId) {
         // Increment usage count for existing master wine
-        await supabase.rpc('increment_wine_usage', { wine_id: masterWineId }).catch(() => {
+        try {
+          await supabase.rpc('increment_wine_usage', { wine_id: masterWineId })
+        } catch {
           // If RPC doesn't exist, try direct update
           supabase
             .from('wines_master')
             .update({ usage_count: (selectedMasterWine?.usage_count || 0) + 1 })
             .eq('id', masterWineId)
-        })
+        }
       }
 
       const wineData = {

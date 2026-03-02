@@ -4,7 +4,7 @@ import React, { forwardRef } from 'react'
 import { motion, HTMLMotionProps } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
-type CardVariant = 'default' | 'elevated' | 'outlined' | 'glass'
+type CardVariant = 'default' | 'elevated' | 'outlined' | 'glass' | 'wine'
 
 interface CardProps extends Omit<HTMLMotionProps<'div'>, 'ref'> {
   variant?: CardVariant
@@ -29,6 +29,11 @@ const cardVariants: Record<CardVariant, string> = {
     'bg-[var(--glass-background)]',
     'backdrop-blur-[var(--glass-blur)]',
     'border border-[var(--glass-border)]'
+  ),
+  wine: cn(
+    'bg-[var(--surface)]',
+    'border border-[var(--wine)]',
+    'shadow-[var(--shadow-elevation-1)]'
   ),
 }
 

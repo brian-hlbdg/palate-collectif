@@ -101,7 +101,7 @@ export default function AdminSettingsPage() {
       setProfile({
         ...profile,
         display_name: displayName.trim(),
-        eventbrite_email: email.trim() || null,
+        eventbrite_email: email.trim() || undefined,
       })
 
       addToast({
