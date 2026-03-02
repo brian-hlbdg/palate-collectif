@@ -257,18 +257,18 @@ export default function HomePage() {
             </span>
           </div>
           <div className="flex items-center gap-6">
-            <Link
+            <a
               href="/privacy"
               className="text-body-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"
             >
               Privacy
-            </Link>
-            <Link
+            </a>
+            <a
               href="/terms"
               className="text-body-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"
             >
               Terms
-            </Link>
+            </a>
           </div>
         </div>
       </footer>
