@@ -90,8 +90,8 @@ export default function CuratorGroupsPage() {
         .order('name', { ascending: true })
 
       if (error) {
+        console.error('Organizations query error:', error)
         if (error.code === '42P01') {
-          // Table doesn't exist
           addToast({ type: 'error', message: 'Organizations table not found. Run the migration first.' })
           setOrganizations([])
           setIsLoading(false)
@@ -102,18 +102,22 @@ export default function CuratorGroupsPage() {
 
       // Get member counts and event counts
       const orgsWithCounts: Organization[] = []
-      
+
       for (const org of orgs || []) {
-        const { count: memberCount } = await supabase
+        const { count: memberCount, error: memberError } = await supabase
           .from('organization_members')
           .select('*', { count: 'exact', head: true })
           .eq('organization_id', org.id)
 
-        const { count: eventCount } = await supabase
+        if (memberError) console.warn('organization_members query error:', memberError)
+
+        const { count: eventCount, error: eventError } = await supabase
           .from('tasting_events')
           .select('*', { count: 'exact', head: true })
           .eq('organization_id', org.id)
           .eq('is_deleted', false)
+
+        if (eventError) console.warn('tasting_events count query error:', eventError)
 
         orgsWithCounts.push({
           ...org,
