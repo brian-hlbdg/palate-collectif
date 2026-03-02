@@ -1,6 +1,6 @@
 'use client'
 
-import React, { forwardRef, useState } from 'react'
+import React, { forwardRef, useState, useId } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff, AlertCircle, Check } from 'lucide-react'
@@ -35,8 +35,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   ) => {
     const [showPassword, setShowPassword] = useState(false)
     const [isFocused, setIsFocused] = useState(false)
-
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`
+    const generatedId = useId()
+    const inputId = id || generatedId
     const inputType = type === 'password' && showPassword ? 'text' : type
 
     const hasError = !!error
@@ -198,7 +198,8 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, error, hint, disabled, id, ...props }, ref) => {
-    const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`
+    const generatedId = useId()
+    const textareaId = id || generatedId
     const hasError = !!error
 
     return (
