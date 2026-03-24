@@ -239,16 +239,39 @@ export async function getEventBuddies(
 ): Promise<EventBuddy[]> {
   try {
     const { data, error } = await supabase
-      .rpc('get_event_buddies', { 
-        p_user_id: userId, 
-        p_event_id: eventId 
+      .rpc('get_event_buddies', {
+        p_user_id: userId,
+        p_event_id: eventId
       })
 
     if (error) throw error
     return data || []
-  } catch (err) {
-    console.error('Error getting event buddies:', err)
-    return []
+  } catch {
+    // Fallback: query tables directly if RPC not available
+    try {
+      const { data: sessions } = await supabase
+        .from('event_buddy_sessions')
+        .select('buddy_id')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+
+      if (!sessions || sessions.length === 0) return []
+
+      const buddyIds = sessions.map(s => s.buddy_id)
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', buddyIds)
+
+      return (profiles || []).map(p => ({
+        buddy_id: p.id,
+        buddy_name: p.display_name || 'Unknown',
+        wines_rated: 0,
+      }))
+    } catch {
+      return []
+    }
   }
 }
 

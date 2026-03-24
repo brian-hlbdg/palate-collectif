@@ -389,7 +389,7 @@ export default function BoothWinesPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  onClick={() => router.push(`/booth/${eventCode}/wines/${wine.id}`)}
+                  onClick={() => router.push(`/booth/${eventCode}/rate/${wine.id}`)}
                   className={cn(
                     'w-full text-left',
                     'bg-[var(--surface)] border rounded-xl p-4',

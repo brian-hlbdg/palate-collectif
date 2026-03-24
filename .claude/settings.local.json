@@ -31,7 +31,10 @@
       "Bash(git add src/app/join/page.tsx src/app/page.tsx && git commit -m \"$\\(cat <<'EOF'\nfixed link issue with terms and privacy\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push)",
       "Bash(git add src/app/terms/page.tsx src/app/privacy/page.tsx src/app/join/page.tsx src/app/page.tsx && git commit -m \"$\\(cat <<'EOF'\nadd terms and privacy pages, restore Link components\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git add src/app/\\\\\\(auth\\\\\\)/register/page.tsx && git commit -m \"$\\(cat <<'EOF'\nuse Link for terms/privacy in register now that pages exist\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\" && git push)"
+      "Bash(git add src/app/\\\\\\(auth\\\\\\)/register/page.tsx && git commit -m \"$\\(cat <<'EOF'\nuse Link for terms/privacy in register now that pages exist\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\" && git push)",
+      "Bash(git add src/lib/supabase.ts && git commit -m \"$\\(cat <<'EOF'\nfix build crash when Supabase env vars missing during prerender\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\nEOF\n\\)\" && git push)",
+      "Bash(ls /Users/hlbdg/palate-collectif/src/app/event/[eventCode]/)",
+      "Bash(ls \"/Users/hlbdg/palate-collectif/src/app/\\(user\\)/event/\" 2>/dev/null && ls \"/Users/hlbdg/palate-collectif/src/app/\\(user\\)/event/[eventCode]/\" 2>/dev/null)"
     ]
   }
 }

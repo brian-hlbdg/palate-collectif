@@ -77,7 +77,7 @@ export default function BoothRatePage() {
   const [showDetails, setShowDetails] = useState(false)
 
   const userId = typeof window !== 'undefined'
-    ? localStorage.getItem('palate-booth-user')
+    ? localStorage.getItem('palate-temp-user')
     : null
 
   // Load wine and existing rating

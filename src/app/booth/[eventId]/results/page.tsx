@@ -8,17 +8,12 @@ import { WineLoader } from '@/components/ui'
 import { EventResults } from '@/components/EventResults'
 import { supabase } from '@/lib/supabase'
 import { isEventClosed } from '@/lib/buddies'
-import {
-  ArrowLeft,
-  Lock,
-  Calendar,
-  Clock,
-} from 'lucide-react'
+import { ArrowLeft, Lock, Calendar } from 'lucide-react'
 
-export default function EventResultsPage() {
+export default function BoothResultsPage() {
   const params = useParams()
   const router = useRouter()
-  const eventCode = params.eventCode as string
+  const eventCode = params.eventId as string
 
   const [event, setEvent] = useState<any>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -31,36 +26,27 @@ export default function EventResultsPage() {
   }, [eventCode])
 
   const loadData = async () => {
-    // Get user
-    const { data: { session } } = await supabase.auth.getSession()
-    let currentUserId = session?.user?.id
+    const currentUserId = localStorage.getItem('palate-temp-user')
     if (!currentUserId) {
-      currentUserId = localStorage.getItem('palate-temp-user') ?? undefined
-    }
-    
-    if (!currentUserId) {
-      router.push('/join')
+      router.push(`/booth/${eventCode}`)
       return
     }
     setUserId(currentUserId)
 
-    // Get event
     const { data: eventData, error } = await supabase
       .from('tasting_events')
       .select('*')
-      .eq('event_code', eventCode)
+      .eq('event_code', eventCode.toUpperCase())
       .single()
 
     if (error || !eventData) {
-      router.push('/join')
+      router.push(`/booth/${eventCode}`)
       return
     }
     setEvent(eventData)
 
-    // Check if event is closed
     const closed = await isEventClosed(eventData.id)
     setIsClosed(closed)
-
     setIsLoading(false)
   }
 
@@ -72,24 +58,20 @@ export default function EventResultsPage() {
     )
   }
 
-  // Event not closed yet
   if (!isClosed) {
     const eventDate = event?.event_date ? new Date(event.event_date) : null
-    
+
     return (
       <div className="min-h-screen bg-[var(--background)]">
-        {/* Header */}
         <header className="sticky top-0 z-40 bg-[var(--surface)]/80 backdrop-blur-xl border-b border-[var(--border)]">
           <div className="px-4 py-3 flex items-center gap-3">
             <button
-              onClick={() => router.push(`/event/${eventCode}`)}
+              onClick={() => router.push(`/booth/${eventCode}/wines`)}
               className="p-2 -ml-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <h1 className="text-body-lg font-semibold text-[var(--foreground)]">
-              Event Results
-            </h1>
+            <h1 className="text-body-lg font-semibold text-[var(--foreground)]">Event Results</h1>
           </div>
         </header>
 
@@ -102,40 +84,32 @@ export default function EventResultsPage() {
             <div className="w-20 h-20 rounded-full bg-[var(--surface)] flex items-center justify-center mx-auto mb-6">
               <Lock className="h-10 w-10 text-[var(--foreground-muted)]" />
             </div>
-            
             <h2 className="text-display-sm font-bold text-[var(--foreground)] mb-3">
               Results Not Available Yet
             </h2>
-            
             <p className="text-body-md text-[var(--foreground-secondary)] mb-6">
               Results will be available after the event ends.
             </p>
-
             {eventDate && (
               <Card variant="wine" padding="md" className="inline-block">
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-[var(--wine)]" />
                   <div className="text-left">
-                    <p className="text-body-xs text-[var(--foreground-muted)]">
-                      Event Date
-                    </p>
+                    <p className="text-body-xs text-[var(--foreground-muted)]">Event Date</p>
                     <p className="text-body-md font-semibold text-[var(--foreground)]">
                       {eventDate.toLocaleDateString('en-US', {
                         weekday: 'long',
                         month: 'long',
                         day: 'numeric',
-                        year: 'numeric'
+                        year: 'numeric',
                       })}
                     </p>
                   </div>
                 </div>
               </Card>
             )}
-
             <div className="mt-8">
-              <Button
-                onClick={() => router.push(`/event/${eventCode}`)}
-              >
+              <Button onClick={() => router.push(`/booth/${eventCode}/wines`)}>
                 Back to Event
               </Button>
             </div>
@@ -145,21 +119,17 @@ export default function EventResultsPage() {
     )
   }
 
-  // Event is closed - show results
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-[var(--surface)]/80 backdrop-blur-xl border-b border-[var(--border)]">
         <div className="px-4 py-3 flex items-center gap-3">
           <button
-            onClick={() => router.push(`/event/${eventCode}`)}
+            onClick={() => router.push(`/booth/${eventCode}/wines`)}
             className="p-2 -ml-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-body-lg font-semibold text-[var(--foreground)]">
-            Event Results
-          </h1>
+          <h1 className="text-body-lg font-semibold text-[var(--foreground)]">Event Results</h1>
         </div>
       </header>
 

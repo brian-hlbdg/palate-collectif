@@ -374,7 +374,7 @@ export default function AdminEventPage() {
                         getWineTypeBg(wine.wine_type)
                       )}>
                         {wine.image_url ? (
-                          <Image src={wine.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                          <Image src={wine.image_url} alt="" className="w-full h-full object-cover rounded-lg" width={256} height={256} />
                         ) : (
                           getWineEmoji(wine.wine_type)
                         )}
