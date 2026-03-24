@@ -486,7 +486,7 @@ export default function HomePage() {
                 Taste together, compare after.
               </h2>
               <p className="mt-4 text-lg text-[var(--foreground-secondary)] leading-relaxed">
-                Share a 4-letter code to connect with anyone at the event. Once the results drop, see your taste match percentage and find out where you agree — and where you beautifully disagree.
+                Share a code to connect with anyone at the event. Once the results drop, see your taste match percentage and find out where you agree — and where you beautifully disagree.
               </p>
               <ul className="mt-6 space-y-3">
                 {[
