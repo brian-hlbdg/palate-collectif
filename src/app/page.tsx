@@ -722,7 +722,7 @@ export default function HomePage() {
                 {
                   version: 'Coming soon',
                   label: 'upcoming',
-                  date: '2025',
+                  date: '2026',
                   items: [
                     'AI-powered wine recommendations based on your ratings',
                     'Permanent wine collection across events',
@@ -732,7 +732,7 @@ export default function HomePage() {
                 {
                   version: 'v2.1',
                   label: 'latest',
-                  date: 'Nov 2024',
+                  date: 'Nov 2025',
                   items: [
                     'Booth mode for self-serve tasting stations',
                     'Buddy system with taste match percentage',
@@ -743,7 +743,7 @@ export default function HomePage() {
                 {
                   version: 'v2.0',
                   label: 'major',
-                  date: 'Aug 2024',
+                  date: 'Aug 2025',
                   items: [
                     'Wine Crawl mode — multi-location events',
                     'QR code entry for events',
@@ -754,7 +754,7 @@ export default function HomePage() {
                 {
                   version: 'v1.0',
                   label: 'origin',
-                  date: 'Jan 2024',
+                  date: 'Jan 2025',
                   items: [
                     'First wine rating experience',
                     'Basic event creation and management',
