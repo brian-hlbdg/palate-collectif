@@ -24,8 +24,10 @@ import {
   QrCode,
   Star,
   GripVertical,
+  X,
 } from 'lucide-react'
 import Image from 'next/image'
+import { QRCodeSVG } from 'qrcode.react'
 
 interface EventData {
   id: string
@@ -35,6 +37,7 @@ interface EventData {
   location?: string
   description?: string
   is_active: boolean
+  is_booth_mode: boolean
 }
 
 interface WineData {
@@ -75,10 +78,15 @@ export default function AdminEventPage() {
   const [locations, setLocations] = useState<LocationData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
 
   // Wine form state
   const [showWineForm, setShowWineForm] = useState(false)
   const [editingWine, setEditingWine] = useState<WineData | null>(null)
+
+  // Stop management state
+  const [newStopName, setNewStopName] = useState('')
+  const [isAddingStop, setIsAddingStop] = useState(false)
 
   // Stats
   const [stats, setStats] = useState({ participants: 0, ratings: 0, avgRating: 0 })
@@ -157,6 +165,45 @@ export default function AdminEventPage() {
     }
   }
 
+  const boothUrl = event ? `${window.location.origin}/booth/${event.event_code}` : ''
+
+  const copyBoothUrl = () => {
+    navigator.clipboard.writeText(boothUrl)
+    setCopiedUrl(true)
+    setTimeout(() => setCopiedUrl(false), 2000)
+  }
+
+  const addStop = async () => {
+    const name = newStopName.trim()
+    if (!name) return
+    setIsAddingStop(true)
+    try {
+      const nextOrder = locations.length + 1
+      const { data, error } = await supabase
+        .from('event_locations')
+        .insert({ event_id: eventId, location_name: name, location_order: nextOrder })
+        .select('*')
+        .single()
+      if (error) throw error
+      setLocations(prev => [...prev, data])
+      setNewStopName('')
+    } catch (err) {
+      addToast({ type: 'error', message: 'Failed to add stop' })
+    } finally {
+      setIsAddingStop(false)
+    }
+  }
+
+  const removeStop = async (locationId: string) => {
+    try {
+      const { error } = await supabase.from('event_locations').delete().eq('id', locationId)
+      if (error) throw error
+      setLocations(prev => prev.filter(l => l.id !== locationId))
+    } catch (err) {
+      addToast({ type: 'error', message: 'Failed to remove stop' })
+    }
+  }
+
   const deleteWine = async (wineId: string) => {
     if (!confirm('Are you sure you want to delete this wine?')) return
 
@@ -191,24 +238,24 @@ export default function AdminEventPage() {
     loadData()
   }
 
-  // Group wines by location
+  // Group wines by location. Use event_locations order when available, else derive from wines.
   const groupedWines = () => {
-    if (locations.length === 0) {
-      return [{ location: null, wines }]
+    const allStopNames = locations.length > 0
+      ? locations.map(l => l.location_name)
+      : Array.from(new Set(wines.filter(w => w.location_name).map(w => w.location_name!)))
+
+    if (allStopNames.length === 0) {
+      return [{ location_name: null as string | null, wines }]
     }
 
-    const groups: { location: LocationData | null; wines: WineData[] }[] = []
-    
-    locations.forEach(loc => {
-      groups.push({
-        location: loc,
-        wines: wines.filter(w => w.location_name === loc.location_name)
-      })
-    })
+    const groups = allStopNames.map(name => ({
+      location_name: name as string | null,
+      wines: wines.filter(w => w.location_name === name),
+    }))
 
     const unassigned = wines.filter(w => !w.location_name)
     if (unassigned.length > 0) {
-      groups.push({ location: null, wines: unassigned })
+      groups.push({ location_name: null, wines: unassigned })
     }
 
     return groups
@@ -316,6 +363,82 @@ export default function AdminEventPage() {
         </Card>
       </div>
 
+      {/* Booth Access — only for booth events */}
+      {event.is_booth_mode && (
+        <Card variant="default" className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <QrCode className="h-5 w-5 text-[var(--wine)]" />
+            <h2 className="text-body-lg font-semibold text-[var(--foreground)]">Booth Access</h2>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-6 items-start">
+            {/* QR Code */}
+            <div className="flex-shrink-0 p-3 bg-white rounded-xl border border-[var(--border)]">
+              <QRCodeSVG value={boothUrl} size={140} />
+            </div>
+            {/* URL + instructions */}
+            <div className="flex-1 space-y-3">
+              <p className="text-body-sm text-[var(--foreground-secondary)]">
+                Display this QR code or share the link so guests can start tasting without an account.
+              </p>
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] font-mono text-body-sm text-[var(--foreground)] break-all">
+                {boothUrl}
+              </div>
+              <Button
+                variant="secondary"
+                leftIcon={copiedUrl ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                onClick={copyBoothUrl}
+              >
+                {copiedUrl ? 'Copied!' : 'Copy Link'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Stops — only for non-booth events */}
+      {!event.is_booth_mode && (
+        <Card variant="default" className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MapPin className="h-5 w-5 text-[var(--wine)]" />
+            <h2 className="text-body-lg font-semibold text-[var(--foreground)]">Stops / Booths</h2>
+            <span className="text-body-xs text-[var(--foreground-secondary)]">optional — for crawls with multiple stops or festivals with vendor booths</span>
+          </div>
+
+          {/* Existing stops */}
+          {locations.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {locations.map((loc, idx) => (
+                <div key={loc.id} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+                  <span className="text-body-sm text-[var(--foreground-muted)] font-mono w-5">{idx + 1}</span>
+                  <span className="flex-1 text-body-md text-[var(--foreground)]">{loc.location_name}</span>
+                  <button
+                    onClick={() => removeStop(loc.id)}
+                    className="p-1 rounded text-[var(--foreground-muted)] hover:text-red-500 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add stop input */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newStopName}
+              onChange={(e) => setNewStopName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addStop())}
+              placeholder="e.g. The Barrel Room or Booth 12"
+              className="flex-1 px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-body-md text-[var(--foreground)] focus:outline-none focus:border-[var(--wine)]"
+            />
+            <Button onClick={addStop} isLoading={isAddingStop} leftIcon={<Plus className="h-4 w-4" />}>
+              Add Stop
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Wines Section */}
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -341,13 +464,13 @@ export default function AdminEventPage() {
         ) : (
           <div className="space-y-6">
             {groupedWines().map((group, groupIdx) => (
-              <div key={group.location?.id || 'unassigned'}>
+              <div key={group.location_name || 'unassigned'}>
                 {/* Location header */}
-                {(locations.length > 0 || group.location) && (
+                {group.location_name && (
                   <div className="flex items-center gap-2 mb-3">
                     <MapPin className="h-4 w-4 text-[var(--wine)]" />
                     <h3 className="text-body-md font-semibold text-[var(--foreground)]">
-                      {group.location?.location_name || 'Unassigned'}
+                      {group.location_name}
                     </h3>
                     <span className="text-body-xs text-[var(--foreground-muted)]">
                       ({group.wines.length} wine{group.wines.length !== 1 ? 's' : ''})
@@ -429,7 +552,11 @@ export default function AdminEventPage() {
         eventId={eventId}
         initialWine={editingWine}
         onSave={handleWineSaved}
-        locations={locations.map(l => ({ location_name: l.location_name }))}
+        locations={
+          locations.length > 0
+            ? locations.map(l => ({ location_name: l.location_name }))
+            : Array.from(new Set(wines.filter(w => w.location_name).map(w => w.location_name!))).map(n => ({ location_name: n }))
+        }
         nextTastingOrder={wines.length + 1}
       />
     </div>

@@ -20,7 +20,7 @@ interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'ref'> {
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary: cn(
-    'bg-[var(--wine)] text-white',
+    'bg-[var(--wine)] text-white [&>span]:text-white [&>svg]:text-white',
     'hover:bg-[var(--wine-hover)]',
     'focus-visible:ring-[var(--wine)]',
     'shadow-sm hover:shadow-md',

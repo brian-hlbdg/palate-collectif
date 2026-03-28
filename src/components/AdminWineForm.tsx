@@ -370,21 +370,23 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
                       </div>
                     )}
                   </div>
-                  {locations.length > 0 && (
-                    <div>
-                      <label className={labelClass}>Location</label>
-                      <select 
-                        value={wine.location_name || ''} 
-                        onChange={(e) => setWine(prev => ({ ...prev, location_name: e.target.value }))} 
-                        className={inputClass}
-                      >
-                        <option value="">No location</option>
+                  <div>
+                    <label className={labelClass}>Stop / Booth <span className="text-[var(--foreground-muted)] font-normal">(optional)</span></label>
+                    <input
+                      list="location-suggestions"
+                      value={wine.location_name || ''}
+                      onChange={(e) => setWine(prev => ({ ...prev, location_name: e.target.value || undefined }))}
+                      placeholder="e.g. The Barrel Room or Booth 12"
+                      className={inputClass}
+                    />
+                    {locations.length > 0 && (
+                      <datalist id="location-suggestions">
                         {locations.map(l => (
-                          <option key={l.location_name} value={l.location_name}>{l.location_name}</option>
+                          <option key={l.location_name} value={l.location_name} />
                         ))}
-                      </select>
-                    </div>
-                  )}
+                      </datalist>
+                    )}
+                  </div>
                   <div>
                     <label className={labelClass}>Sommelier Notes</label>
                     <textarea 

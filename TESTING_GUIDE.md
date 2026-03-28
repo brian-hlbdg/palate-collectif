@@ -45,8 +45,8 @@ The script is safe to re-run — it clears old demo data first.
 4. **Events list** — click "Your Events" to see all 3 demo events
 5. Open **Chateau Lumiere Showcase** (Booth event)
    - Review event details, event code, active status
-   - Click "Manage Wines" to see the 5 curated wines
-   - Show the Booth URL that can be shared or displayed as a QR code
+   - The **Booth Access** section shows a QR code and copyable link guests use to start tasting
+   - Scroll down to the **Event Wines** section to see the 5 curated wines
 6. Open **Old Town Wine Crawl**
    - Show the 3 location stops and 6 wines distributed across them
 7. Open **Grand Harvest Festival**

@@ -168,14 +168,14 @@ export default function NewEventPage() {
                   'text-body-md font-semibold',
                   eventType === 'regular' ? 'text-[var(--wine)]' : 'text-[var(--foreground)]'
                 )}>
-                  Wine Crawl
+                  Tasting Event
                 </span>
                 {eventType === 'regular' && (
                   <Check className="h-5 w-5 text-[var(--wine)] ml-auto" />
                 )}
               </div>
               <p className="text-body-sm text-[var(--foreground-secondary)]">
-                Guests join with an event code
+                Festival, crawl, or any event where guests join with a code
               </p>
             </button>
 
