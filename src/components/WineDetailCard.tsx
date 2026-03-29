@@ -49,7 +49,7 @@ export function WineDetailCard({ wine, rating, showFullDetails = false, classNam
           ) : (
             <div className="text-center">
               <span className="text-6xl">{getWineEmoji(wine.wine_type)}</span>
-              <p className={cn('text-body-sm mt-2', typeColors.text)}>{wine.wine_type?.charAt(0).toUpperCase() + wine.wine_type?.slice(1)}</p>
+              <p className={cn('text-body-sm mt-2', 'text-[var(--foreground)]')}>{wine.wine_type?.charAt(0).toUpperCase() + wine.wine_type?.slice(1)}</p>
             </div>
           )}
         </div>
@@ -82,7 +82,7 @@ export function WineDetailCard({ wine, rating, showFullDetails = false, classNam
         {wineStyle.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-3">
             {wineStyle.map((style: string, idx: number) => (
-              <span key={idx} className={cn('px-2 py-0.5 rounded-full text-body-xs', typeColors.bg, typeColors.text, typeColors.border, 'border')}>{style}</span>
+              <span key={idx} className={cn('px-2 py-0.5 rounded-full text-body-xs', typeColors.bg, 'text-[var(--foreground)]', typeColors.border, 'border')}>{style}</span>
             ))}
           </div>
         )}

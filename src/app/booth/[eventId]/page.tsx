@@ -8,6 +8,7 @@ import { Button, Input, Card } from '@/components/ui'
 import { WineLoader } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
+import { generateUUID } from '@/lib/utils'
 import { Wine, Mail, ArrowRight, Sparkles } from 'lucide-react'
 import Image from 'next/image'
 
@@ -113,7 +114,7 @@ export default function BoothEntryPage() {
         userId = existingUser.id
       } else {
         // Generate a proper UUID
-        const newUUID = crypto.randomUUID()
+        const newUUID = generateUUID()
         
         const expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + 30) // 30 days for booth users

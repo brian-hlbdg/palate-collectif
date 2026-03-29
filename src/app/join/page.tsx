@@ -9,6 +9,7 @@ import { Button, Input, Card } from '@/components/ui'
 import { ThemeToggle } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
+import { generateUUID } from '@/lib/utils'
 import QRScanner from '@/components/QRScanner'
 import {
   Wine,
@@ -82,7 +83,7 @@ export default function JoinEventPage() {
 
     try {
       // Generate proper UUID for the profile
-      const tempId = crypto.randomUUID()
+      const tempId = generateUUID()
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 7)
 
@@ -98,7 +99,9 @@ export default function JoinEventPage() {
         })
 
       if (profileError) {
-        throw profileError
+        console.error('Profile insert error:', profileError)
+        setError(`Failed to join: ${profileError.message}`)
+        return
       }
 
       // Store temp user ID
@@ -112,8 +115,10 @@ export default function JoinEventPage() {
 
       // Navigate to event page using event_code
       router.push(`/event/${eventCode.toUpperCase()}`)
-    } catch (err) {
-      setError('Failed to join event. Please try again.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('Join event error:', err)
+      setError(`Failed to join event: ${msg}`)
     } finally {
       setIsLoading(false)
     }

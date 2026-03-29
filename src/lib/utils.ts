@@ -153,6 +153,21 @@ export function generateId(): string {
 }
 
 /**
+ * Generate a UUID v4 — works in both secure (HTTPS) and non-secure (HTTP local) contexts.
+ * crypto.randomUUID() requires a secure context, so we fall back to Math.random() locally.
+ */
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
+/**
  * Check if a value is empty (null, undefined, empty string, empty array)
  */
 export function isEmpty(value: unknown): boolean {

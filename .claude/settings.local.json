@@ -36,7 +36,8 @@
       "Bash(ls /Users/hlbdg/palate-collectif/src/app/event/[eventCode]/)",
       "Bash(ls \"/Users/hlbdg/palate-collectif/src/app/\\(user\\)/event/\" 2>/dev/null && ls \"/Users/hlbdg/palate-collectif/src/app/\\(user\\)/event/[eventCode]/\" 2>/dev/null)",
       "Bash(npx tsc:*)",
-      "Bash(cat -n src/app/admin/events/[eventId]/page.tsx)"
+      "Bash(cat -n src/app/admin/events/[eventId]/page.tsx)",
+      "Bash(cat:*)"
     ]
   }
 }

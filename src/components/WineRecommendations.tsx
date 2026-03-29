@@ -163,7 +163,7 @@ export function WineRecommendations({
                           key={i}
                           className={cn(
                             'px-2 py-1 rounded-full text-body-xs capitalize',
-                            style.bg, style.text
+                            style.bg, 'text-[var(--foreground)]'
                           )}
                         >
                           {style.emoji} {pref.type}
@@ -338,7 +338,7 @@ export function WineRecommendations({
                     <div className="flex items-center gap-3 mt-2 text-body-xs text-[var(--foreground-muted)]">
                       <span className={cn(
                         'px-2 py-0.5 rounded capitalize',
-                        typeStyle.bg, typeStyle.text
+                        typeStyle.bg, 'text-[var(--foreground)]'
                       )}>
                         {wine.wine_type}
                       </span>

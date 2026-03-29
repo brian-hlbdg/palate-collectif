@@ -85,8 +85,8 @@ export async function getOrCreateBuddyCode(
 
     if (error) throw error
     return { code: data }
-  } catch (err) {
-    console.error('Error getting buddy code:', err)
+  } catch (err: any) {
+    console.error('get_or_create_buddy_code rpc error:', err?.message || JSON.stringify(err))
     
     // Fallback: Generate code client-side
     const code = generateClientCode()
@@ -149,9 +149,9 @@ export async function connectWithBuddy(
     }
     
     return { success: false, message: 'Unknown error' }
-  } catch (err) {
-    console.error('Error connecting with buddy:', err)
-    
+  } catch (err: any) {
+    console.error('Error connecting with buddy (rpc):', err?.message || err?.details || err?.code || JSON.stringify(err))
+
     // Fallback: Manual connection
     return manualBuddyConnect(userId, buddyCode, eventId)
   }
@@ -244,10 +244,13 @@ export async function getEventBuddies(
         p_event_id: eventId
       })
 
-    if (error) throw error
+    if (error) {
+      console.error('get_event_buddies rpc error:', error?.message || JSON.stringify(error))
+      throw error
+    }
     return data || []
   } catch {
-    // Fallback: query tables directly if RPC not available
+    // Fallback: query tables directly
     try {
       const { data: sessions } = await supabase
         .from('event_buddy_sessions')
@@ -259,15 +262,37 @@ export async function getEventBuddies(
 
       const buddyIds = sessions.map(s => s.buddy_id)
 
+      // Load buddy profiles
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, display_name')
         .in('id', buddyIds)
 
+      // Load wine IDs for this event
+      const { data: eventWines } = await supabase
+        .from('event_wines')
+        .select('id')
+        .eq('event_id', eventId)
+
+      const wineIds = (eventWines || []).map(w => w.id)
+
+      // Count ratings per buddy
+      const wineCountMap: Record<string, number> = {}
+      if (wineIds.length > 0) {
+        for (const buddyId of buddyIds) {
+          const { count } = await supabase
+            .from('user_wine_ratings')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', buddyId)
+            .in('event_wine_id', wineIds)
+          wineCountMap[buddyId] = count || 0
+        }
+      }
+
       return (profiles || []).map(p => ({
         buddy_id: p.id,
         buddy_name: p.display_name || 'Unknown',
-        wines_rated: 0,
+        wines_rated: wineCountMap[p.id] || 0,
       }))
     } catch {
       return []

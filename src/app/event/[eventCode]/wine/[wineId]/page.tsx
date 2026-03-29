@@ -106,10 +106,7 @@ export default function WineDetailPage() {
   // Navigation
   const [allWineIds, setAllWineIds] = useState<string[]>([])
   const [showDetails, setShowDetails] = useState(false)
-
-  const userId = typeof window !== 'undefined'
-    ? localStorage.getItem('palate-temp-user')
-    : null
+  const [userId, setUserId] = useState<string | null>(null)
 
   // Helper to parse JSONB fields
   const parseJSON = <T,>(value: T | string | undefined): T | null => {
@@ -123,10 +120,18 @@ export default function WineDetailPage() {
   // Load wine and existing rating
   useEffect(() => {
     const loadData = async () => {
-      if (!userId) {
+      // Resolve userId — localStorage first (matches list page priority)
+      const tempId = typeof window !== 'undefined' ? localStorage.getItem('palate-temp-user') : null
+      let resolvedUserId = tempId
+      if (!resolvedUserId) {
+        const { data: { session } } = await supabase.auth.getSession()
+        resolvedUserId = session?.user?.id || null
+      }
+      if (!resolvedUserId) {
         router.push(`/join`)
         return
       }
+      setUserId(resolvedUserId)
 
       try {
         // Get event by event_code
@@ -179,7 +184,7 @@ export default function WineDetailPage() {
         const { data: existingRating } = await supabase
           .from('user_wine_ratings')
           .select('rating, personal_notes, would_buy')
-          .eq('user_id', userId)
+          .eq('user_id', resolvedUserId)
           .eq('event_wine_id', wineId)
           .single()
 
@@ -197,7 +202,8 @@ export default function WineDetailPage() {
     }
 
     loadData()
-  }, [eventCode, wineId, userId, router])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventCode, wineId])
 
   // Navigation helpers
   const currentIndex = allWineIds.indexOf(wineId)
@@ -244,6 +250,7 @@ export default function WineDetailPage() {
       if (nextWineId) {
         router.push(`/event/${eventCode}/wine/${nextWineId}`)
       } else {
+        router.refresh()
         router.push(`/event/${eventCode}`)
       }
     } catch (err) {
@@ -359,7 +366,7 @@ export default function WineDetailPage() {
               <div className="absolute top-4 right-4">
                 <span className={cn(
                   'px-3 py-1 rounded-full text-body-sm font-medium capitalize',
-                  typeColors.bg, typeColors.text
+                  typeColors.bg, 'text-[var(--foreground)]'
                 )}>
                   {wine.wine_type || 'Wine'}
                 </span>
@@ -471,7 +478,7 @@ export default function WineDetailPage() {
                 key={i}
                 className={cn(
                   'px-3 py-1 rounded-full text-body-sm border',
-                  typeColors.bg, typeColors.text, 'border-current/30'
+                  typeColors.bg, 'text-[var(--foreground)]', 'border-[var(--border)]'
                 )}
               >
                 {style}

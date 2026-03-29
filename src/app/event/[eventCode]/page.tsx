@@ -93,20 +93,21 @@ export default function EventWinesPage() {
   const [eventClosed, setEventClosed] = useState(false)
   const [buddyCount, setBuddyCount] = useState(0)
 
-  // Check user
+  // Check user — check localStorage first so the ID matches what the wine detail page uses
   const checkUser = async () => {
+    const tempId = localStorage.getItem('palate-temp-user')
+    if (tempId) {
+      setIsTempUser(true)
+      setUserId(tempId)
+      return tempId
+    }
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
       setIsTempUser(false)
       setUserId(session.user.id)
       return session.user.id
     }
-    const tempId = localStorage.getItem('palate-temp-user')
-    if (tempId) {
-      setIsTempUser(true)
-      setUserId(tempId)
-    }
-    return tempId
+    return null
   }
 
   useEffect(() => {
@@ -115,6 +116,29 @@ export default function EventWinesPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventCode])
+
+  // Re-fetch ratings when user navigates back to this page
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && userId) {
+        const wineIds = wines.map(w => w.id)
+        if (wineIds.length === 0) return
+        const { data: ratings } = await supabase
+          .from('user_wine_ratings')
+          .select('event_wine_id, rating, would_buy')
+          .eq('user_id', userId)
+          .in('event_wine_id', wineIds)
+        if (ratings) {
+          const ratingsMap: Record<string, UserRating> = {}
+          ratings.forEach(r => { ratingsMap[r.event_wine_id] = r })
+          setUserRatings(ratingsMap)
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, wines])
 
   const loadData = async () => {
     const currentUserId = await checkUser()
@@ -184,9 +208,12 @@ export default function EventWinesPage() {
 
     // Filter wines based on search and type filter
     const filteredWines = wines.filter(wine => {
-      const matchesSearch = !searchQuery || 
+      const matchesSearch = !searchQuery ||
         wine.wine_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        wine.producer?.toLowerCase().includes(searchQuery.toLowerCase())
+        wine.producer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        wine.wine_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        wine.region?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        wine.country?.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesType = !filterType || wine.wine_type === filterType
       return matchesSearch && matchesType
     })
