@@ -73,7 +73,7 @@ export default function BetaPage() {
             <div className="w-8 h-8 rounded-lg bg-[var(--wine-muted)] flex items-center justify-center">
               <Wine className="h-4 w-4 text-[var(--wine)]" />
             </div>
-            <span className="text-body-md font-semibold text-[var(--foreground)]">Palate Collectif</span>
+            <span className="text-body-md font-semibold text-[var(--foreground)]">Palate</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--wine)] text-white ml-1">BETA</span>
           </div>
           <ThemeToggle />
@@ -107,10 +107,10 @@ export default function BetaPage() {
                 transition={{ delay: 0.2 }}
               >
                 <h1 className="text-display-md font-bold text-[var(--foreground)] mb-3">
-                  You've been invited to test Palate Collectif
+                  You've been invited to test Palate
                 </h1>
                 <p className="text-body-md text-[var(--foreground-secondary)] mb-8">
-                  Palate Collectif is a wine tasting app that lets guests rate wines, connect with tasting buddies, and compare results at live events. Are you here to test it?
+                  Palate is a wine tasting app that lets guests rate wines, connect with tasting buddies, and compare results at live events. Are you here to test it?
                 </p>
               </motion.div>
 
