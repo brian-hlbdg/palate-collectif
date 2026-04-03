@@ -13,11 +13,11 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Palate Collectif | Wine Tasting Experience',
-    template: '%s | Palate Collectif',
+    default: 'Palate — Wine Tasting Experience',
+    template: '%s | Palate',
   },
   description:
-    'Transform wine tasting events into memorable, data-rich experiences. Rate wines, discover favorites, and build your palate.',
+    'Rate wines, explore tasting notes, and connect with friends at live wine events. Palate makes every tasting memorable.',
   keywords: [
     'wine tasting',
     'wine events',
@@ -26,30 +26,30 @@ export const metadata: Metadata = {
     'wine crawl',
     'wine app',
   ],
-  authors: [{ name: 'Palate Collectif' }],
-  creator: 'Palate Collectif',
+  authors: [{ name: 'Collectif' }],
+  creator: 'Collectif',
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://palatecollectif.com',
-    siteName: 'Palate Collectif',
-    title: 'Palate Collectif | Wine Tasting Experience',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://palatecollectif.com',
+    siteName: 'Palate',
+    title: 'Palate — Wine Tasting Experience',
     description:
-      'Transform wine tasting events into memorable, data-rich experiences.',
+      'Rate wines, explore tasting notes, and connect with friends at live wine events.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Palate Collectif',
+        alt: 'Palate — Wine Tasting Experience',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Palate Collectif | Wine Tasting Experience',
+    title: 'Palate — Wine Tasting Experience',
     description:
-      'Transform wine tasting events into memorable, data-rich experiences.',
+      'Rate wines, explore tasting notes, and connect with friends at live wine events.',
     images: ['/og-image.png'],
   },
   icons: {
