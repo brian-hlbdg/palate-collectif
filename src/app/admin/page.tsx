@@ -16,6 +16,9 @@ import {
   ArrowRight,
   Plus,
   BarChart3,
+  MessageSquarePlus,
+  X,
+  CheckCircle,
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -40,6 +43,8 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false)
+  const [suggestionSubmitted, setSuggestionSubmitted] = useState(false)
 
   const adminId = typeof window !== 'undefined'
     ? localStorage.getItem('palate-admin-user')
@@ -128,6 +133,18 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Suggestion Modal */}
+      {showSuggestionModal && (
+        <SuggestionModal
+          adminId={adminId!}
+          onClose={() => setShowSuggestionModal(false)}
+          onSubmitted={() => {
+            setSuggestionSubmitted(true)
+            setShowSuggestionModal(false)
+          }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -138,12 +155,37 @@ export default function AdminDashboardPage() {
             Overview of your wine tasting events
           </p>
         </div>
-        <Link href="/admin/events/new">
-          <Button leftIcon={<Plus className="h-5 w-5" />}>
-            New Event
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            leftIcon={<MessageSquarePlus className="h-5 w-5" />}
+            onClick={() => { setSuggestionSubmitted(false); setShowSuggestionModal(true) }}
+          >
+            Send Suggestion
           </Button>
-        </Link>
+          <Link href="/admin/events/new">
+            <Button leftIcon={<Plus className="h-5 w-5" />}>
+              New Event
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Suggestion submitted banner */}
+      {suggestionSubmitted && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--wine-muted)] border border-[var(--wine)]">
+          <CheckCircle className="h-5 w-5 text-[var(--wine)] flex-shrink-0" />
+          <p className="text-body-sm text-[var(--foreground)]">
+            Your suggestion has been sent to the Palate team. Thank you!
+          </p>
+          <button
+            onClick={() => setSuggestionSubmitted(false)}
+            className="ml-auto text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -344,6 +386,146 @@ function EventCard({ event }: { event: RecentEvent }) {
         <StatusBadge status={event.is_active ? 'active' : 'inactive'} size="sm" />
       </Card>
     </Link>
+  )
+}
+
+// Suggestion Modal
+function SuggestionModal({
+  adminId,
+  onClose,
+  onSubmitted,
+}: {
+  adminId: string
+  onClose: () => void
+  onSubmitted: () => void
+}) {
+  const [category, setCategory] = useState<'feature' | 'bug' | 'improvement' | 'other'>('feature')
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async () => {
+    if (!title.trim() || !description.trim()) {
+      setError('Please fill in both title and description.')
+      return
+    }
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const { error: insertError } = await supabase
+        .from('admin_suggestions')
+        .insert({
+          admin_id: adminId,
+          category,
+          title: title.trim(),
+          description: description.trim(),
+          status: 'pending',
+        })
+      if (insertError) throw insertError
+      onSubmitted()
+    } catch (err: unknown) {
+      setError('Failed to submit. Please try again.')
+      console.error('Suggestion submit error:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="w-full max-w-md bg-[var(--background)] border border-[var(--border)] rounded-2xl p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-body-lg font-semibold text-[var(--foreground)]">
+            Send a Suggestion
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-[var(--surface)] text-[var(--foreground-muted)]"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Category */}
+          <div>
+            <label className="block text-body-sm font-medium text-[var(--foreground)] mb-2">
+              Category
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['feature', 'bug', 'improvement', 'other'] as const).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={cn(
+                    'px-3 py-2 rounded-xl text-body-sm font-medium border transition-all',
+                    category === c
+                      ? 'border-[var(--wine)] text-[var(--wine)] bg-[var(--wine-muted)]'
+                      : 'border-[var(--border)] text-[var(--foreground-secondary)]'
+                  )}
+                >
+                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-body-sm font-medium text-[var(--foreground)] mb-2">
+              Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Brief summary of your suggestion"
+              className={cn(
+                'w-full px-4 py-3 rounded-xl border bg-[var(--surface)]',
+                'border-[var(--border)] text-[var(--foreground)]',
+                'placeholder:text-[var(--foreground-muted)]',
+                'focus:outline-none focus:border-[var(--wine)]',
+                'text-body-md'
+              )}
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-body-sm font-medium text-[var(--foreground)] mb-2">
+              Details
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe the suggestion in more detail..."
+              rows={4}
+              className={cn(
+                'w-full px-4 py-3 rounded-xl border bg-[var(--surface)]',
+                'border-[var(--border)] text-[var(--foreground)]',
+                'placeholder:text-[var(--foreground-muted)]',
+                'focus:outline-none focus:border-[var(--wine)]',
+                'text-body-md resize-none'
+              )}
+            />
+          </div>
+
+          {error && (
+            <p className="text-body-sm text-red-500">{error}</p>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <Button variant="secondary" className="flex-1" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button className="flex-1" onClick={handleSubmit} isLoading={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 

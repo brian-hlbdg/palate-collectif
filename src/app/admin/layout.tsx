@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Plus,
+  Package,
 } from 'lucide-react'
 
 interface AdminUser {
@@ -35,6 +36,7 @@ export default function AdminLayout({
   const [user, setUser] = useState<AdminUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [newChangelogCount, setNewChangelogCount] = useState(0)
 
   // Check admin auth
   useEffect(() => {
@@ -57,6 +59,19 @@ export default function AdminLayout({
 
         if (profile?.is_admin) {
           setUser(profile)
+
+          // Check for new changelog entries since last seen
+          const lastSeen = localStorage.getItem('palate-changelog-last-seen')
+          const query = supabase
+            .from('changelog_entries')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_published', true)
+          if (lastSeen) {
+            query.gt('published_at', lastSeen)
+          }
+          const { count: changelogCount } = await query
+          setNewChangelogCount(changelogCount || 0)
+
           setIsLoading(false)
           return
         }
@@ -98,7 +113,13 @@ export default function AdminLayout({
     { href: '/admin/events', icon: Calendar, label: 'Events' },
     { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
     { href: '/admin/settings', icon: Settings, label: 'Settings' },
+    { href: '/changelog', icon: Package, label: "What's New", badge: newChangelogCount > 0 ? newChangelogCount : undefined },
   ]
+
+  const handleChangelogClick = () => {
+    localStorage.setItem('palate-changelog-last-seen', new Date().toISOString())
+    setNewChangelogCount(0)
+  }
 
   if (isLoading) {
     return (
@@ -138,15 +159,16 @@ export default function AdminLayout({
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-1">
             {navItems.map((item) => {
-              const isActive = pathname === item.href || 
+              const isActive = pathname === item.href ||
                 (item.href !== '/admin' && pathname.startsWith(item.href))
-              
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={item.href === '/changelog' ? handleChangelogClick : undefined}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-xl',
+                    'flex items-center justify-between px-4 py-3 rounded-xl',
                     'text-body-md font-medium',
                     'transition-all duration-200',
                     isActive
@@ -154,8 +176,15 @@ export default function AdminLayout({
                       : 'text-[var(--foreground-secondary)] hover:bg-[var(--hover-overlay)] hover:text-[var(--foreground)]'
                   )}
                 >
-                  <item.icon className="h-5 w-5" />
-                  {item.label}
+                  <div className="flex items-center gap-3">
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                  </div>
+                  {'badge' in item && item.badge && (
+                    <span className="px-2 py-0.5 rounded-full text-body-xs font-semibold bg-[var(--wine)] text-white">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}
@@ -254,17 +283,27 @@ export default function AdminLayout({
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      if (item.href === '/changelog') handleChangelogClick()
+                    }}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-xl',
+                      'flex items-center justify-between px-4 py-3 rounded-xl',
                       'text-body-md font-medium',
                       isActive
                         ? 'bg-[var(--wine-muted)] text-[var(--wine)]'
                         : 'text-[var(--foreground-secondary)]'
                     )}
                   >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
+                    <div className="flex items-center gap-3">
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                    </div>
+                    {'badge' in item && item.badge && (
+                      <span className="px-2 py-0.5 rounded-full text-body-xs font-semibold bg-[var(--wine)] text-white">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 )
               })}

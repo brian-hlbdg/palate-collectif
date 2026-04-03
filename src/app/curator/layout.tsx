@@ -20,6 +20,7 @@ import {
   Clock,
   AlertTriangle,
   Building,
+  ClipboardList,
 } from 'lucide-react'
 
 interface CuratorUser {
@@ -39,6 +40,7 @@ export default function CuratorLayout({
   const [isLoading, setIsLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const [pendingSuggestionsCount, setPendingSuggestionsCount] = useState(0)
 
   // Check curator auth
   useEffect(() => {
@@ -66,8 +68,16 @@ export default function CuratorLayout({
             .from('user_wines')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'pending')
-          
+
           setPendingCount(count || 0)
+
+          // Get pending suggestions count
+          const { count: suggestionsCount } = await supabase
+            .from('admin_suggestions')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending')
+
+          setPendingSuggestionsCount(suggestionsCount || 0)
           
           setIsLoading(false)
           return
@@ -115,10 +125,16 @@ export default function CuratorLayout({
       icon: Building, 
       label: 'Groups',
     },
-    { 
-      href: '/curator/health', 
-      icon: Activity, 
+    {
+      href: '/curator/health',
+      icon: Activity,
       label: 'Data Health',
+    },
+    {
+      href: '/curator/build-log',
+      icon: ClipboardList,
+      label: 'Build Log',
+      badge: pendingSuggestionsCount > 0 ? pendingSuggestionsCount : undefined,
     },
   ]
 
