@@ -412,24 +412,25 @@ function SuggestionModal({
     }
     setIsSubmitting(true)
     setError(null)
-    try {
-      const { error: insertError } = await supabase
-        .from('admin_suggestions')
-        .insert({
-          admin_id: adminId,
-          category,
-          title: title.trim(),
-          description: description.trim(),
-          status: 'pending',
-        })
-      if (insertError) throw insertError
-      onSubmitted()
-    } catch (err: unknown) {
-      setError('Failed to submit. Please try again.')
-      console.error('Suggestion submit error:', err)
-    } finally {
-      setIsSubmitting(false)
+    const { error: insertError } = await supabase
+      .from('admin_suggestions')
+      .insert({
+        admin_id: adminId,
+        category,
+        title: title.trim(),
+        description: description.trim(),
+        status: 'pending',
+      })
+
+    setIsSubmitting(false)
+
+    if (insertError) {
+      console.error('Suggestion submit error:', insertError.message, insertError.details, insertError.code)
+      setError(insertError.message || 'Failed to submit. Please try again.')
+      return
     }
+
+    onSubmitted()
   }
 
   return (

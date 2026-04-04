@@ -37,7 +37,17 @@
       "Bash(ls \"/Users/hlbdg/palate-collectif/src/app/\\(user\\)/event/\" 2>/dev/null && ls \"/Users/hlbdg/palate-collectif/src/app/\\(user\\)/event/[eventCode]/\" 2>/dev/null)",
       "Bash(npx tsc:*)",
       "Bash(cat -n src/app/admin/events/[eventId]/page.tsx)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:whova.com)",
+      "WebFetch(domain:www.eventmobi.com)",
+      "WebFetch(domain:www.slido.com)",
+      "WebFetch(domain:www.guidebook.com)",
+      "WebFetch(domain:eventify.io)",
+      "WebFetch(domain:eventee.com)",
+      "WebFetch(domain:www.perfectvenue.com)",
+      "WebFetch(domain:business.cellarpass.com)",
+      "WebFetch(domain:www.mews.com)"
     ]
   }
 }
