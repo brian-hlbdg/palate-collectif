@@ -108,44 +108,54 @@ function escapeCSV(value: any): string {
 }
 
 function generateByWineReport(wines: any[], ratings: any[], userMap: Map<string, any>): string {
-  const headers = ['Tasting Order','Wine Name','Producer','Vintage','Type','Region','Country','Total Ratings','Avg Rating','Would Buy Count','Would Buy %','Highest','Lowest','Comments']
+  const headers = ['Tasting Order','Wine Name','Producer','Vintage','Type','Region','Country','Total Ratings','Avg Rating','Would Buy Count','Would Buy %','Times Skipped','Top Skip Reason','Highest','Lowest','Comments']
   const rows = wines.map(wine => {
     const wr = ratings.filter(r => r.event_wine_id === wine.id)
-    const total = wr.length, avg = total > 0 ? (wr.reduce((s, r) => s + r.rating, 0) / total).toFixed(1) : 'N/A'
-    const wbc = wr.filter(r => r.would_buy).length, wbp = total > 0 ? Math.round((wbc / total) * 100) : 0
-    const comments = wr.filter(r => r.personal_notes).map(r => `[${userMap.get(r.user_id)?.display_name || 'Anon'}]: ${r.personal_notes}`).join(' | ')
-    return [wine.tasting_order, wine.wine_name, wine.producer || '', wine.vintage || '', wine.wine_type, wine.region || '', wine.country || '', total, avg, wbc, `${wbp}%`, total > 0 ? Math.max(...wr.map(r => r.rating)) : 'N/A', total > 0 ? Math.min(...wr.map(r => r.rating)) : 'N/A', comments]
+    const activeWr = wr.filter(r => !r.is_skipped)
+    const skippedWr = wr.filter(r => r.is_skipped)
+    const total = activeWr.length, avg = total > 0 ? (activeWr.reduce((s, r) => s + r.rating, 0) / total).toFixed(1) : 'N/A'
+    const wbc = activeWr.filter(r => r.would_buy).length, wbp = total > 0 ? Math.round((wbc / total) * 100) : 0
+    const skipReasonCounts: Record<string, number> = {}
+    skippedWr.forEach(r => { if (r.skip_reason) skipReasonCounts[r.skip_reason] = (skipReasonCounts[r.skip_reason] || 0) + 1 })
+    const topSkipReason = Object.entries(skipReasonCounts).sort(([,a],[,b]) => b - a)[0]?.[0] || ''
+    const comments = activeWr.filter(r => r.personal_notes).map(r => `[${userMap.get(r.user_id)?.display_name || 'Anon'}]: ${r.personal_notes}`).join(' | ')
+    return [wine.tasting_order, wine.wine_name, wine.producer || '', wine.vintage || '', wine.wine_type, wine.region || '', wine.country || '', total, avg, wbc, `${wbp}%`, skippedWr.length, topSkipReason, total > 0 ? Math.max(...activeWr.map(r => r.rating)) : 'N/A', total > 0 ? Math.min(...activeWr.map(r => r.rating)) : 'N/A', comments]
   })
   return [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n')
 }
 
 function generateByUserReport(wines: any[], ratings: any[], userMap: Map<string, any>): string {
-  const headers = ['User Name','Email','Wines Rated','Avg Rating','Would Buy Count','Top Rated Wine','Top Rating','Range']
+  const headers = ['User Name','Email','Wines Rated','Wines Skipped','Avg Rating','Would Buy Count','Top Rated Wine','Top Rating','Range']
   const userRatings = new Map<string, any[]>()
   ratings.forEach(r => { const ex = userRatings.get(r.user_id) || []; ex.push(r); userRatings.set(r.user_id, ex) })
   const rows = Array.from(userRatings.entries()).map(([userId, urs]) => {
-    const user = userMap.get(userId), total = urs.length, avg = (urs.reduce((s, r) => s + r.rating, 0) / total).toFixed(1)
-    const wbc = urs.filter(r => r.would_buy).length, topR = urs.sort((a, b) => b.rating - a.rating)[0]
-    const topWine = wines.find(w => w.id === topR?.event_wine_id), allR = urs.map(r => r.rating)
-    return [user?.display_name || 'Anon', user?.eventbrite_email || '', total, avg, wbc, topWine?.wine_name || 'N/A', topR?.rating || 'N/A', `${Math.min(...allR)} - ${Math.max(...allR)}`]
+    const user = userMap.get(userId)
+    const activeUrs = urs.filter(r => !r.is_skipped)
+    const skippedCount = urs.filter(r => r.is_skipped).length
+    const total = activeUrs.length, avg = total > 0 ? (activeUrs.reduce((s, r) => s + r.rating, 0) / total).toFixed(1) : 'N/A'
+    const wbc = activeUrs.filter(r => r.would_buy).length, topR = activeUrs.sort((a, b) => b.rating - a.rating)[0]
+    const topWine = wines.find(w => w.id === topR?.event_wine_id), allR = activeUrs.map(r => r.rating)
+    return [user?.display_name || 'Anon', user?.eventbrite_email || '', total, skippedCount, avg, wbc, topWine?.wine_name || 'N/A', topR?.rating || 'N/A', allR.length > 0 ? `${Math.min(...allR)} - ${Math.max(...allR)}` : 'N/A']
   })
   return [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n')
 }
 
 function generateSummaryReport(wines: any[], ratings: any[], userMap: Map<string, any>, eventName: string): string {
-  const tw = wines.length, tr = ratings.length, tp = new Set(ratings.map(r => r.user_id)).size
-  const avg = tr > 0 ? (ratings.reduce((s, r) => s + r.rating, 0) / tr).toFixed(2) : 0
-  const wbc = ratings.filter(r => r.would_buy).length, wbp = tr > 0 ? Math.round((wbc / tr) * 100) : 0
-  const wineAvg = wines.map(w => { const wr = ratings.filter(r => r.event_wine_id === w.id); return { wine: w, avg: wr.length > 0 ? wr.reduce((s, r) => s + r.rating, 0) / wr.length : 0, count: wr.length } }).sort((a, b) => b.avg - a.avg)
-  const top = wineAvg[0], dist = [1,2,3,4,5].map(r => ({ r, c: ratings.filter(x => x.rating === r).length }))
-  return [['Event Summary'],[''],['Event Name',eventName],['Total Wines',tw],['Participants',tp],['Total Ratings',tr],['Avg Rating',avg],['Would Buy %',`${wbp}%`],[''],['Top Wine',top?.wine.wine_name||'N/A'],['Top Avg',top?.avg.toFixed(2)||'N/A'],[''],['Distribution'],...dist.map(d => [`${d.r} Stars`,d.c])].map(row => row.map(escapeCSV).join(',')).join('\n')
+  const activeRatings = ratings.filter(r => !r.is_skipped)
+  const tw = wines.length, tr = activeRatings.length, ts = ratings.filter(r => r.is_skipped).length
+  const tp = new Set(ratings.map(r => r.user_id)).size
+  const avg = tr > 0 ? (activeRatings.reduce((s, r) => s + r.rating, 0) / tr).toFixed(2) : 0
+  const wbc = activeRatings.filter(r => r.would_buy).length, wbp = tr > 0 ? Math.round((wbc / tr) * 100) : 0
+  const wineAvg = wines.map(w => { const wr = activeRatings.filter(r => r.event_wine_id === w.id); return { wine: w, avg: wr.length > 0 ? wr.reduce((s, r) => s + r.rating, 0) / wr.length : 0, count: wr.length } }).sort((a, b) => b.avg - a.avg)
+  const top = wineAvg[0], dist = [1,2,3,4,5].map(r => ({ r, c: activeRatings.filter(x => x.rating === r).length }))
+  return [['Event Summary'],[''],['Event Name',eventName],['Total Wines',tw],['Participants',tp],['Total Ratings',tr],['Total Skips',ts],['Avg Rating',avg],['Would Buy %',`${wbp}%`],[''],['Top Wine',top?.wine.wine_name||'N/A'],['Top Avg',top?.avg.toFixed(2)||'N/A'],[''],['Distribution'],...dist.map(d => [`${d.r} Stars`,d.c])].map(row => row.map(escapeCSV).join(',')).join('\n')
 }
 
 function generateDetailedReport(wines: any[], ratings: any[], userMap: Map<string, any>): string {
-  const headers = ['Wine','Producer','Vintage','Type','Region','User','Rating','Would Buy','Notes','Rated At']
+  const headers = ['Wine','Producer','Vintage','Type','Region','User','Rating','Would Buy','Skipped','Skip Reason','Notes','Rated At']
   const rows = ratings.map(r => {
     const wine = wines.find(w => w.id === r.event_wine_id), user = userMap.get(r.user_id)
-    return [wine?.wine_name||'Unknown', wine?.producer||'', wine?.vintage||'', wine?.wine_type||'', wine?.region||'', user?.display_name||'Anon', r.rating, r.would_buy?'Yes':'No', r.personal_notes||'', new Date(r.created_at).toLocaleString()]
+    return [wine?.wine_name||'Unknown', wine?.producer||'', wine?.vintage||'', wine?.wine_type||'', wine?.region||'', user?.display_name||'Anon', r.is_skipped ? '' : r.rating, r.is_skipped ? '' : (r.would_buy?'Yes':'No'), r.is_skipped?'Yes':'No', r.skip_reason||'', r.personal_notes||'', new Date(r.created_at).toLocaleString()]
   })
   return [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n')
 }

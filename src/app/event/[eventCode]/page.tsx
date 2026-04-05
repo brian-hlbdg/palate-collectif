@@ -23,6 +23,7 @@ import {
   Navigation,
   ShoppingBag,
   Trophy,
+  AlertCircle,
 } from 'lucide-react'
 import { BuddyConnect } from '@/components/BuddyConnect'
 import { isEventClosed, getEventBuddies } from '@/lib/buddies'
@@ -61,6 +62,7 @@ interface UserRating {
   event_wine_id: string
   rating: number
   would_buy: boolean
+  is_skipped?: boolean
 }
 
 interface LocationGroup {
@@ -92,6 +94,9 @@ export default function EventWinesPage() {
   const [showBuddiesPanel, setShowBuddiesPanel] = useState(false)
   const [eventClosed, setEventClosed] = useState(false)
   const [buddyCount, setBuddyCount] = useState(0)
+
+  // Missed wines banner
+  const [showMissedBanner, setShowMissedBanner] = useState(true)
 
   // Check user — check localStorage first so the ID matches what the wine detail page uses
   const checkUser = async () => {
@@ -125,7 +130,7 @@ export default function EventWinesPage() {
         if (wineIds.length === 0) return
         const { data: ratings } = await supabase
           .from('user_wine_ratings')
-          .select('event_wine_id, rating, would_buy')
+          .select('event_wine_id, rating, would_buy, is_skipped')
           .eq('user_id', userId)
           .in('event_wine_id', wineIds)
         if (ratings) {
@@ -181,7 +186,7 @@ export default function EventWinesPage() {
         const wineIds = wineData.map(w => w.id)
         const { data: ratings } = await supabase
           .from('user_wine_ratings')
-          .select('event_wine_id, rating, would_buy')
+          .select('event_wine_id, rating, would_buy, is_skipped')
           .eq('user_id', currentUserId)
           .in('event_wine_id', wineIds)
 
@@ -246,8 +251,11 @@ export default function EventWinesPage() {
 
   // Stats
   const totalWines = wines.length
-  const ratedCount = Object.keys(userRatings).length
-  const progressPercent = totalWines > 0 ? (ratedCount / totalWines) * 100 : 0
+  const ratedCount = Object.values(userRatings).filter(r => !r.is_skipped).length
+  const skippedCount = Object.values(userRatings).filter(r => r.is_skipped).length
+  const engagedCount = ratedCount + skippedCount
+  const progressPercent = totalWines > 0 ? (engagedCount / totalWines) * 100 : 0
+  const untouchedCount = totalWines - engagedCount
   const isWineCrawl = wines.some(w => w.location_name)
 
   // Get unique wine types for filter
@@ -330,7 +338,7 @@ export default function EventWinesPage() {
               />
             </div>
             <span className="text-body-xs text-[var(--foreground-muted)] whitespace-nowrap">
-              {ratedCount}/{totalWines}
+              {ratedCount} tasted{skippedCount > 0 ? ` · ${skippedCount} skipped` : ''} / {totalWines}
             </span>
           </div>
         </div>
@@ -453,8 +461,9 @@ export default function EventWinesPage() {
                 {/* Wine cards */}
                 <div className="space-y-3">
                   {group.wines.map((wine, index) => {
-                    const rating = userRatings[wine.id]
-                    const isRated = !!rating
+                    const ratingData = userRatings[wine.id]
+                    const isSkipped = ratingData?.is_skipped === true
+                    const isRated = !!ratingData && !isSkipped
                     const flag = wine.country ? countryFlags[wine.country] : null
 
                     return (
@@ -470,7 +479,9 @@ export default function EventWinesPage() {
                           'transition-all duration-200',
                           isRated
                             ? 'border-[var(--wine)]/30'
-                            : 'border-[var(--border)] hover:border-[var(--foreground-muted)]'
+                            : isSkipped
+                              ? 'border-[var(--border)] opacity-60'
+                              : 'border-[var(--border)] hover:border-[var(--foreground-muted)]'
                         )}
                       >
                         <div className="flex items-center gap-4">
@@ -485,7 +496,7 @@ export default function EventWinesPage() {
                                 alt={wine.wine_name}
                                 className="w-full h-full object-cover rounded-xl"
                                 width={64}
-                                height={64} 
+                                height={64}
                               />
                             ) : (
                               getWineEmoji(wine.wine_type)
@@ -521,15 +532,19 @@ export default function EventWinesPage() {
 
                           {/* Rating status */}
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            {isRated ? (
+                            {isSkipped ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--border)] text-[var(--foreground-muted)]">
+                                Skipped
+                              </span>
+                            ) : isRated ? (
                               <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1">
                                   <Star className="h-4 w-4 fill-[var(--wine)] text-[var(--wine)]" />
                                   <span className="text-body-sm font-medium text-[var(--foreground)]">
-                                    {rating.rating}
+                                    {ratingData.rating}
                                   </span>
                                 </div>
-                                {rating.would_buy && (
+                                {ratingData.would_buy && (
                                   <ShoppingBag className="h-4 w-4 text-[var(--wine)]" />
                                 )}
                                 <Check className="h-5 w-5 text-[var(--wine)]" />
@@ -545,6 +560,36 @@ export default function EventWinesPage() {
                 </div>
               </div>
             ))}
+
+            {/* Missed wines banner */}
+            <AnimatePresence>
+              {showMissedBanner && untouchedCount > 0 && engagedCount > 0 && !searchQuery && !filterType && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="mt-4 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl"
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-[var(--foreground-muted)] flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-body-sm font-medium text-[var(--foreground)]">
+                        You haven&apos;t tried {untouchedCount} {untouchedCount === 1 ? 'wine' : 'wines'}
+                      </p>
+                      <p className="text-body-xs text-[var(--foreground-secondary)] mt-0.5">
+                        Tap a wine to tell us why you skipped it — helps the event organizer.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowMissedBanner(false)}
+                      className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* No results from search/filter */}
             {groupedWines().length === 0 && wines.length > 0 && (

@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Download,
   ShoppingBag,
+  SkipForward,
 } from 'lucide-react'
 
 interface EventData {
@@ -39,13 +40,24 @@ interface WineRating {
   would_buy_percent: number
 }
 
+interface SkippedWine {
+  id: string
+  wine_name: string
+  producer?: string
+  skip_count: number
+  skip_percent: number
+  top_reason: string
+}
+
 interface Analytics {
   totalRatings: number
+  totalSkips: number
   averageRating: number
   totalParticipants: number
   totalWines: number
   wouldBuyPercent: number
   wineRankings: WineRating[]
+  skippedWines: SkippedWine[]
   ratingDistribution: number[]
   topDescriptors: { name: string; count: number }[]
 }
@@ -90,11 +102,13 @@ export default function AdminAnalyticsPage() {
       if (!wines || wines.length === 0) {
         setAnalytics({
           totalRatings: 0,
+          totalSkips: 0,
           averageRating: 0,
           totalParticipants: 0,
           totalWines: 0,
           wouldBuyPercent: 0,
           wineRankings: [],
+          skippedWines: [],
           ratingDistribution: [0, 0, 0, 0, 0],
           topDescriptors: [],
         })
@@ -113,6 +127,7 @@ export default function AdminAnalyticsPage() {
       if (!ratings || ratings.length === 0) {
         setAnalytics({
           totalRatings: 0,
+          totalSkips: 0,
           averageRating: 0,
           totalParticipants: 0,
           totalWines: wines.length,
@@ -127,6 +142,7 @@ export default function AdminAnalyticsPage() {
             would_buy_count: 0,
             would_buy_percent: 0,
           })),
+          skippedWines: [],
           ratingDistribution: [0, 0, 0, 0, 0],
           topDescriptors: [],
         })
@@ -134,18 +150,23 @@ export default function AdminAnalyticsPage() {
         return
       }
 
-      // Calculate analytics
-      const totalRatings = ratings.length
-      const avgRating = ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings
-      const uniqueUsers = new Set(ratings.map(r => r.user_id))
-      const wouldBuyCount = ratings.filter(r => r.would_buy).length
+      // Separate real ratings from skips
+      const activeRatings = ratings.filter((r: any) => !r.is_skipped)
+      const skippedRatings = ratings.filter((r: any) => r.is_skipped)
 
-      // Wine rankings
+      // Calculate analytics (using only active ratings)
+      const totalRatings = activeRatings.length
+      const totalSkips = skippedRatings.length
+      const avgRating = totalRatings > 0 ? activeRatings.reduce((sum: number, r: any) => sum + r.rating, 0) / totalRatings : 0
+      const uniqueUsers = new Set(ratings.map((r: any) => r.user_id))
+      const wouldBuyCount = activeRatings.filter((r: any) => r.would_buy).length
+
+      // Wine rankings (active only)
       const wineRankings: WineRating[] = wines.map(wine => {
-        const wineRatings = ratings.filter(r => r.event_wine_id === wine.id)
+        const wineRatings = activeRatings.filter((r: any) => r.event_wine_id === wine.id)
         const count = wineRatings.length
-        const avg = count > 0 ? wineRatings.reduce((sum, r) => sum + r.rating, 0) / count : 0
-        const wouldBuy = wineRatings.filter(r => r.would_buy).length
+        const avg = count > 0 ? wineRatings.reduce((sum: number, r: any) => sum + r.rating, 0) / count : 0
+        const wouldBuy = wineRatings.filter((r: any) => r.would_buy).length
 
         return {
           id: wine.id,
@@ -159,19 +180,44 @@ export default function AdminAnalyticsPage() {
         }
       }).sort((a, b) => b.avg_rating - a.avg_rating)
 
-      // Rating distribution
+      // Skipped wines analysis
+      const totalInteractions = ratings.length
+      const skippedWines: SkippedWine[] = wines
+        .map(wine => {
+          const wineSkips = skippedRatings.filter((r: any) => r.event_wine_id === wine.id)
+          if (wineSkips.length === 0) return null
+          const reasonCounts: Record<string, number> = {}
+          wineSkips.forEach((r: any) => {
+            const reason = r.skip_reason || 'No reason given'
+            reasonCounts[reason] = (reasonCounts[reason] || 0) + 1
+          })
+          const topReason = Object.entries(reasonCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || ''
+          const wineInteractions = ratings.filter((r: any) => r.event_wine_id === wine.id).length
+          return {
+            id: wine.id,
+            wine_name: wine.wine_name,
+            producer: wine.producer,
+            skip_count: wineSkips.length,
+            skip_percent: wineInteractions > 0 ? Math.round((wineSkips.length / wineInteractions) * 100) : 0,
+            top_reason: topReason,
+          }
+        })
+        .filter(Boolean)
+        .sort((a, b) => b!.skip_count - a!.skip_count) as SkippedWine[]
+
+      // Rating distribution (active only)
       const distribution = [0, 0, 0, 0, 0]
-      ratings.forEach(r => {
+      activeRatings.forEach((r: any) => {
         if (r.rating >= 1 && r.rating <= 5) {
           distribution[r.rating - 1]++
         }
       })
 
-      // Load descriptors
+      // Load descriptors (active ratings only)
       const { data: descriptorData } = await supabase
         .from('user_wine_descriptors')
         .select('descriptor_id, descriptors(name)')
-        .in('rating_id', ratings.map(r => r.id))
+        .in('rating_id', activeRatings.map((r: any) => r.id))
 
       const descriptorCounts: Record<string, number> = {}
       descriptorData?.forEach((d: any) => {
@@ -188,11 +234,13 @@ export default function AdminAnalyticsPage() {
 
       setAnalytics({
         totalRatings,
+        totalSkips,
         averageRating: Math.round(avgRating * 10) / 10,
         totalParticipants: uniqueUsers.size,
         totalWines: wines.length,
-        wouldBuyPercent: Math.round((wouldBuyCount / totalRatings) * 100),
+        wouldBuyPercent: totalRatings > 0 ? Math.round((wouldBuyCount / totalRatings) * 100) : 0,
         wineRankings,
+        skippedWines,
         ratingDistribution: distribution,
         topDescriptors,
       })
@@ -251,12 +299,13 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <StatCard icon={Star} label="Avg Rating" value={analytics.averageRating.toString()} suffix="/ 5" color="wine" />
         <StatCard icon={BarChart3} label="Total Ratings" value={analytics.totalRatings.toString()} color="blue" />
         <StatCard icon={Users} label="Participants" value={analytics.totalParticipants.toString()} color="green" />
         <StatCard icon={Wine} label="Wines" value={analytics.totalWines.toString()} color="purple" />
         <StatCard icon={ShoppingBag} label="Would Buy" value={`${analytics.wouldBuyPercent}%`} color="gold" />
+        <StatCard icon={SkipForward} label="Skipped" value={analytics.totalSkips.toString()} color="muted" />
       </div>
 
       {analytics.totalRatings === 0 ? (
@@ -345,6 +394,36 @@ export default function AdminAnalyticsPage() {
               </div>
             </Card>
           )}
+
+          {/* Skipped Wines */}
+          {analytics.skippedWines.length > 0 && (
+            <Card variant="default" className="lg:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <SkipForward className="h-5 w-5 text-[var(--foreground-muted)]" />
+                <h2 className="text-body-lg font-semibold text-[var(--foreground)]">Skipped Wines</h2>
+                <span className="text-body-xs text-[var(--foreground-muted)]">— not counted in ratings</span>
+              </div>
+              <div className="space-y-3">
+                {analytics.skippedWines.map(wine => (
+                  <div key={wine.id} className="flex items-center gap-4 p-3 rounded-xl bg-[var(--surface)]">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body-md font-medium text-[var(--foreground)] truncate">{wine.wine_name}</p>
+                      {wine.producer && <p className="text-body-sm text-[var(--foreground-muted)]">{wine.producer}</p>}
+                      {wine.top_reason && (
+                        <p className="text-body-xs text-[var(--foreground-secondary)] mt-0.5">
+                          Top reason: {wine.top_reason}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-body-md font-semibold text-[var(--foreground)]">{wine.skip_count}×</p>
+                      <p className="text-body-xs text-[var(--foreground-muted)]">{wine.skip_percent}% of tasters</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
@@ -354,8 +433,8 @@ export default function AdminAnalyticsPage() {
   )
 }
 
-function StatCard({ icon: Icon, label, value, suffix, color }: { icon: typeof Star; label: string; value: string; suffix?: string; color: 'wine' | 'blue' | 'green' | 'purple' | 'gold' }) {
-  const colorClasses = { wine: 'text-[var(--wine)]', blue: 'text-blue-500', green: 'text-green-500', purple: 'text-purple-500', gold: 'text-[var(--gold)]' }
+function StatCard({ icon: Icon, label, value, suffix, color }: { icon: typeof Star; label: string; value: string; suffix?: string; color: 'wine' | 'blue' | 'green' | 'purple' | 'gold' | 'muted' }) {
+  const colorClasses = { wine: 'text-[var(--wine)]', blue: 'text-blue-500', green: 'text-green-500', purple: 'text-purple-500', gold: 'text-[var(--gold)]', muted: 'text-[var(--foreground-muted)]' }
   return (
     <Card variant="default" className="text-center">
       <Icon className={cn('h-6 w-6 mx-auto mb-2', colorClasses[color])} />

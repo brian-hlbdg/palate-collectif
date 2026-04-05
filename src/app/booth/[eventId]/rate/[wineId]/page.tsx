@@ -25,6 +25,9 @@ import {
   Eye,
   Droplets,
   FileText,
+  X,
+  SkipForward,
+  RotateCcw,
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -75,7 +78,16 @@ interface UserRating {
   rating: number
   personal_notes?: string
   would_buy?: boolean
+  is_skipped?: boolean
+  skip_reason?: string
 }
+
+const SKIP_REASONS = [
+  "Ran out of time",
+  "Wasn't available / ran out",
+  "Not my style",
+  "Already familiar with it",
+]
 
 export default function BoothRatePage() {
   const params = useParams()
@@ -94,6 +106,10 @@ export default function BoothRatePage() {
   const [notes, setNotes] = useState('')
   const [wouldBuy, setWouldBuy] = useState(false)
   const [hasExistingRating, setHasExistingRating] = useState(false)
+  const [isSkipped, setIsSkipped] = useState(false)
+  const [skipReason, setSkipReason] = useState<string | null>(null)
+  const [showSkipModal, setShowSkipModal] = useState(false)
+  const [isSkipping, setIsSkipping] = useState(false)
 
   const [allWineIds, setAllWineIds] = useState<string[]>([])
   const [showDetails, setShowDetails] = useState(false)
@@ -137,16 +153,21 @@ export default function BoothRatePage() {
 
         const { data: existingRating } = await supabase
           .from('user_wine_ratings')
-          .select('rating, personal_notes, would_buy')
+          .select('rating, personal_notes, would_buy, is_skipped, skip_reason')
           .eq('user_id', userId)
           .eq('event_wine_id', wineId)
           .single()
 
         if (existingRating) {
-          setRating(existingRating.rating)
-          setNotes(existingRating.personal_notes || '')
-          setWouldBuy(existingRating.would_buy || false)
           setHasExistingRating(true)
+          if (existingRating.is_skipped) {
+            setIsSkipped(true)
+            setSkipReason(existingRating.skip_reason || null)
+          } else {
+            setRating(existingRating.rating)
+            setNotes(existingRating.personal_notes || '')
+            setWouldBuy(existingRating.would_buy || false)
+          }
         }
       } catch (err) {
         console.error('Error loading data:', err)
@@ -186,6 +207,43 @@ export default function BoothRatePage() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleSkip = async (reason: string) => {
+    if (!userId) return
+    setIsSkipping(true)
+    try {
+      const skipData = { user_id: userId, event_wine_id: wineId, rating: 0, is_skipped: true, skip_reason: reason, personal_notes: null, would_buy: false }
+      if (hasExistingRating) {
+        await supabase.from('user_wine_ratings').update(skipData).eq('user_id', userId).eq('event_wine_id', wineId)
+      } else {
+        await supabase.from('user_wine_ratings').insert(skipData)
+      }
+      setIsSkipped(true)
+      setSkipReason(reason)
+      setHasExistingRating(true)
+      setShowSkipModal(false)
+      addToast({ type: 'success', message: 'Marked as skipped' })
+      if (nextWineId) {
+        router.push(`/booth/${eventCode}/rate/${nextWineId}`)
+      } else {
+        router.push(`/booth/${eventCode}/wines`)
+      }
+    } catch (err) {
+      console.error('Error skipping wine:', err)
+      addToast({ type: 'error', message: 'Failed to save. Please try again.' })
+    } finally {
+      setIsSkipping(false)
+    }
+  }
+
+  const handleUndoSkip = async () => {
+    if (!userId) return
+    await supabase.from('user_wine_ratings').delete().eq('user_id', userId).eq('event_wine_id', wineId)
+    setIsSkipped(false)
+    setSkipReason(null)
+    setHasExistingRating(false)
+    setRating(0)
   }
 
   const getWineEmoji = (type: string | null | undefined) => {
@@ -506,23 +564,96 @@ export default function BoothRatePage() {
 
         {/* Rating Section */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <Card variant="elevated" padding="lg">
-            <div className="text-center mb-6">
-              <h2 className="text-body-lg font-semibold text-[var(--foreground)] mb-2">
-                How would you rate this wine?
-              </h2>
-              <StarRating value={rating} onChange={setRating} size="lg" showValue />
-            </div>
-            <Textarea
-              label="Personal Notes (optional)"
-              placeholder="What stood out to you? Any flavors you noticed?"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-[100px]"
-            />
-          </Card>
+          {isSkipped ? (
+            <Card variant="outlined" padding="lg" className="text-center border-[var(--border)]">
+              <div className="w-12 h-12 rounded-full bg-[var(--surface)] flex items-center justify-center mx-auto mb-3">
+                <SkipForward className="h-6 w-6 text-[var(--foreground-muted)]" />
+              </div>
+              <p className="text-body-md font-medium text-[var(--foreground)] mb-1">Marked as skipped</p>
+              {skipReason && (
+                <p className="text-body-sm text-[var(--foreground-muted)] mb-4">"{skipReason}"</p>
+              )}
+              <button
+                onClick={handleUndoSkip}
+                className="flex items-center gap-2 mx-auto text-body-sm text-[var(--wine)] hover:underline"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Undo — rate this wine instead
+              </button>
+            </Card>
+          ) : (
+            <Card variant="elevated" padding="lg">
+              <div className="text-center mb-6">
+                <h2 className="text-body-lg font-semibold text-[var(--foreground)] mb-2">
+                  How would you rate this wine?
+                </h2>
+                <StarRating value={rating} onChange={setRating} size="lg" showValue />
+              </div>
+              <Textarea
+                label="Personal Notes (optional)"
+                placeholder="What stood out to you? Any flavors you noticed?"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="min-h-[100px]"
+              />
+              <button
+                onClick={() => setShowSkipModal(true)}
+                className="mt-4 w-full flex items-center justify-center gap-2 text-body-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors py-2"
+              >
+                <SkipForward className="h-4 w-4" />
+                Didn&apos;t taste this wine
+              </button>
+            </Card>
+          )}
         </motion.div>
       </main>
+
+      {/* Skip Reason Modal */}
+      <AnimatePresence>
+        {showSkipModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+            onClick={() => setShowSkipModal(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full bg-[var(--background)] rounded-t-3xl p-6 pb-10"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-body-lg font-semibold text-[var(--foreground)]">Why didn&apos;t you taste this?</h3>
+                <button onClick={() => setShowSkipModal(false)} className="p-1.5 rounded-lg text-[var(--foreground-muted)] hover:text-[var(--foreground)]">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {SKIP_REASONS.map(reason => (
+                  <button
+                    key={reason}
+                    onClick={() => handleSkip(reason)}
+                    disabled={isSkipping}
+                    className={cn(
+                      'w-full text-left px-4 py-3 rounded-xl border text-body-md',
+                      'border-[var(--border)] text-[var(--foreground)]',
+                      'hover:border-[var(--wine)] hover:bg-[var(--wine-muted)]',
+                      'transition-all duration-150'
+                    )}
+                  >
+                    {reason}
+                  </button>
+                ))}
+                <OtherReasonInput onSubmit={handleSkip} isSkipping={isSkipping} />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom action bar */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-[var(--surface)] border-t border-[var(--border)]">
@@ -535,18 +666,77 @@ export default function BoothRatePage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Button
-            fullWidth
-            size="lg"
-            onClick={handleSave}
-            isLoading={isSaving}
-            disabled={rating === 0}
-            rightIcon={nextWineId ? <ArrowRight className="h-5 w-5" /> : <Check className="h-5 w-5" />}
-          >
-            {rating === 0 ? 'Select a rating' : nextWineId ? 'Save & Next' : 'Save & Finish'}
-          </Button>
+          {isSkipped ? (
+            <Button
+              fullWidth
+              size="lg"
+              variant="secondary"
+              onClick={() => nextWineId ? router.push(`/booth/${eventCode}/rate/${nextWineId}`) : router.push(`/booth/${eventCode}/wines`)}
+              rightIcon={nextWineId ? <ArrowRight className="h-5 w-5" /> : <Check className="h-5 w-5" />}
+            >
+              {nextWineId ? 'Next Wine' : 'Finish'}
+            </Button>
+          ) : (
+            <Button
+              fullWidth
+              size="lg"
+              onClick={handleSave}
+              isLoading={isSaving}
+              disabled={rating === 0}
+              rightIcon={nextWineId ? <ArrowRight className="h-5 w-5" /> : <Check className="h-5 w-5" />}
+            >
+              {rating === 0 ? 'Select a rating' : nextWineId ? 'Save & Next' : 'Save & Finish'}
+            </Button>
+          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Reusable "Other" free-text input for skip reasons
+function OtherReasonInput({ onSubmit, isSkipping }: { onSubmit: (r: string) => void; isSkipping: boolean }) {
+  const [show, setShow] = useState(false)
+  const [value, setValue] = useState('')
+  if (!show) {
+    return (
+      <button
+        onClick={() => setShow(true)}
+        className={cn(
+          'w-full text-left px-4 py-3 rounded-xl border text-body-md',
+          'border-[var(--border)] text-[var(--foreground-secondary)]',
+          'hover:border-[var(--wine)] hover:bg-[var(--wine-muted)]',
+          'transition-all duration-150'
+        )}
+      >
+        Other reason…
+      </button>
+    )
+  }
+  return (
+    <div className="space-y-2">
+      <input
+        autoFocus
+        type="text"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        placeholder="Describe why..."
+        className={cn(
+          'w-full px-4 py-3 rounded-xl border bg-[var(--surface)]',
+          'border-[var(--border)] text-[var(--foreground)]',
+          'placeholder:text-[var(--foreground-muted)]',
+          'focus:outline-none focus:border-[var(--wine)]',
+          'text-body-md'
+        )}
+      />
+      <Button
+        fullWidth
+        onClick={() => value.trim() && onSubmit(value.trim())}
+        disabled={!value.trim() || isSkipping}
+        isLoading={isSkipping}
+      >
+        Skip Wine
+      </Button>
     </div>
   )
 }

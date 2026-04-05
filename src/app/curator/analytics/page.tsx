@@ -14,6 +14,7 @@ import {
   MapPin,
   BarChart3,
   Award,
+  SkipForward,
 } from 'lucide-react'
 
 interface WineStats {
@@ -45,6 +46,7 @@ interface PlatformStats {
   totalMasterWines: number
   totalEventWines: number
   totalRatings: number
+  totalSkips: number
   totalEvents: number
   avgRating: number
   wouldBuyPercent: number
@@ -80,19 +82,22 @@ export default function CuratorAnalyticsPage() {
 
       const { data: allRatings } = await supabase
         .from('user_wine_ratings')
-        .select('rating, would_buy')
+        .select('rating, would_buy, is_skipped')
 
-      const totalRatings = allRatings?.length || 0
+      const activeRatings = allRatings?.filter(r => !r.is_skipped) || []
+      const totalRatings = activeRatings.length
+      const totalSkips = allRatings?.filter(r => r.is_skipped).length || 0
       const avgRating = totalRatings > 0
-        ? allRatings!.reduce((sum, r) => sum + r.rating, 0) / totalRatings
+        ? activeRatings.reduce((sum, r) => sum + r.rating, 0) / totalRatings
         : 0
-      const wouldBuyCount = allRatings?.filter(r => r.would_buy).length || 0
+      const wouldBuyCount = activeRatings.filter(r => r.would_buy).length
       const wouldBuyPercent = totalRatings > 0 ? (wouldBuyCount / totalRatings) * 100 : 0
 
       setPlatformStats({
         totalMasterWines: masterCount || 0,
         totalEventWines: eventWineCount || 0,
         totalRatings,
+        totalSkips,
         totalEvents: eventCount || 0,
         avgRating: Math.round(avgRating * 10) / 10,
         wouldBuyPercent: Math.round(wouldBuyPercent),
@@ -239,7 +244,7 @@ export default function CuratorAnalyticsPage() {
       </div>
 
       {/* Platform Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <StatCard
           icon={Wine}
           label="Master Wines"
@@ -259,6 +264,11 @@ export default function CuratorAnalyticsPage() {
           icon={Star}
           label="Total Ratings"
           value={platformStats?.totalRatings || 0}
+        />
+        <StatCard
+          icon={SkipForward}
+          label="Total Skips"
+          value={platformStats?.totalSkips || 0}
         />
         <StatCard
           icon={TrendingUp}

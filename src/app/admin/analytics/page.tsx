@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Award,
   Filter,
+  SkipForward,
 } from 'lucide-react'
 
 interface EventOption {
@@ -29,6 +30,7 @@ interface EventOption {
 
 interface AnalyticsData {
   totalRatings: number
+  totalSkips: number
   totalParticipants: number
   averageRating: number
   wouldBuyPercentage: number
@@ -127,6 +129,7 @@ export default function AnalyticsPage() {
         if (wineIds.length === 0) {
           setAnalytics({
             totalRatings: 0,
+            totalSkips: 0,
             totalParticipants: 0,
             averageRating: 0,
             wouldBuyPercentage: 0,
@@ -142,13 +145,14 @@ export default function AnalyticsPage() {
         // Get all ratings for these wines
         const { data: ratings } = await supabase
           .from('user_wine_ratings')
-          .select('id, event_wine_id, user_id, rating, would_buy, created_at')
+          .select('id, event_wine_id, user_id, rating, would_buy, is_skipped, created_at')
           .in('event_wine_id', wineIds)
           .order('created_at', { ascending: false })
 
         if (!ratings || ratings.length === 0) {
           setAnalytics({
             totalRatings: 0,
+            totalSkips: 0,
             totalParticipants: 0,
             averageRating: 0,
             wouldBuyPercentage: 0,
@@ -161,25 +165,29 @@ export default function AnalyticsPage() {
           return
         }
 
-        // Calculate stats
-        const totalRatings = ratings.length
+        // Separate active ratings from skips
+        const activeRatings = ratings.filter(r => !r.is_skipped)
+        const totalSkips = ratings.filter(r => r.is_skipped).length
+
+        // Calculate stats (active only)
+        const totalRatings = activeRatings.length
         const uniqueUsers = new Set(ratings.map(r => r.user_id))
         const totalParticipants = uniqueUsers.size
-        const averageRating = ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings
-        const wouldBuyCount = ratings.filter(r => r.would_buy).length
-        const wouldBuyPercentage = (wouldBuyCount / totalRatings) * 100
+        const averageRating = totalRatings > 0 ? activeRatings.reduce((sum, r) => sum + r.rating, 0) / totalRatings : 0
+        const wouldBuyCount = activeRatings.filter(r => r.would_buy).length
+        const wouldBuyPercentage = totalRatings > 0 ? (wouldBuyCount / totalRatings) * 100 : 0
 
-        // Rating distribution (1-5 stars)
+        // Rating distribution (active only)
         const ratingDistribution = [0, 0, 0, 0, 0]
-        ratings.forEach(r => {
+        activeRatings.forEach(r => {
           if (r.rating >= 1 && r.rating <= 5) {
             ratingDistribution[r.rating - 1]++
           }
         })
 
-        // Top wines by average rating
+        // Top wines by average rating (active only)
         const wineRatings: Record<string, { ratings: number[]; wouldBuy: number }> = {}
-        ratings.forEach(r => {
+        activeRatings.forEach(r => {
           if (!wineRatings[r.event_wine_id]) {
             wineRatings[r.event_wine_id] = { ratings: [], wouldBuy: 0 }
           }
@@ -222,8 +230,8 @@ export default function AnalyticsPage() {
           }))
           .sort((a, b) => b.count - a.count)
 
-        // Recent activity
-        const recentActivity: ActivityItem[] = ratings.slice(0, 10).map(r => {
+        // Recent activity (active only)
+        const recentActivity: ActivityItem[] = activeRatings.slice(0, 10).map(r => {
           const wine = wines?.find(w => w.id === r.event_wine_id)
           return {
             id: r.id,
@@ -235,6 +243,7 @@ export default function AnalyticsPage() {
 
         setAnalytics({
           totalRatings,
+          totalSkips,
           totalParticipants,
           averageRating: Math.round(averageRating * 10) / 10,
           wouldBuyPercentage: Math.round(wouldBuyPercentage),
@@ -278,11 +287,11 @@ export default function AnalyticsPage() {
       // Get all ratings
       const { data: ratings } = await supabase
         .from('user_wine_ratings')
-        .select('event_wine_id, user_id, rating, personal_notes, would_buy, created_at')
+        .select('event_wine_id, user_id, rating, personal_notes, would_buy, is_skipped, skip_reason, created_at')
         .in('event_wine_id', wineIds)
 
       // Build CSV
-      const headers = ['Wine Name', 'Producer', 'Vintage', 'Type', 'Region', 'Rating', 'Would Buy', 'Notes', 'Date']
+      const headers = ['Wine Name', 'Producer', 'Vintage', 'Type', 'Region', 'Rating', 'Would Buy', 'Skipped', 'Skip Reason', 'Notes', 'Date']
       const rows = ratings?.map(r => {
         const wine = wines?.find(w => w.id === r.event_wine_id)
         return [
@@ -291,8 +300,10 @@ export default function AnalyticsPage() {
           wine?.vintage || '',
           wine?.wine_type || '',
           wine?.region || '',
-          r.rating.toString(),
-          r.would_buy ? 'Yes' : 'No',
+          r.is_skipped ? '' : r.rating.toString(),
+          r.is_skipped ? '' : (r.would_buy ? 'Yes' : 'No'),
+          r.is_skipped ? 'Yes' : 'No',
+          r.skip_reason?.replace(/"/g, '""') || '',
           r.personal_notes?.replace(/"/g, '""') || '',
           new Date(r.created_at).toLocaleDateString(),
         ]
@@ -387,7 +398,7 @@ export default function AnalyticsPage() {
       ) : (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard
               icon={Star}
               label="Total Ratings"
@@ -411,6 +422,12 @@ export default function AnalyticsPage() {
               icon={ShoppingBag}
               label="Would Buy"
               value={`${analytics.wouldBuyPercentage}%`}
+              color="wine"
+            />
+            <StatCard
+              icon={SkipForward}
+              label="Skipped"
+              value={analytics.totalSkips.toLocaleString()}
               color="wine"
             />
           </div>

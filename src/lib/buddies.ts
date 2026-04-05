@@ -284,6 +284,7 @@ export async function getEventBuddies(
             .from('user_wine_ratings')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', buddyId)
+            .eq('is_skipped', false)
             .in('event_wine_id', wineIds)
           wineCountMap[buddyId] = count || 0
         }

@@ -36,12 +36,13 @@ export interface WineRecommendation {
 // Build a taste profile from user's ratings
 export async function buildTasteProfile(userId: string): Promise<UserTasteProfile | null> {
   try {
-    // Get all user ratings with wine details
+    // Get all user ratings with wine details (exclude skipped)
     const { data: ratings, error } = await supabase
       .from('user_wine_ratings')
       .select(`
         rating,
         would_buy,
+        is_skipped,
         event_wines (
           wine_name,
           wine_type,
@@ -81,9 +82,10 @@ export async function buildTasteProfile(userId: string): Promise<UserTasteProfil
     let totalRatingSum = 0
 
     ratings.forEach((r: any) => {
+      if (r.is_skipped) return
       const weight = getWeight(r.rating)
       const wine = r.event_wines
-      
+
       if (!wine || weight === 0) return
       
       totalRatingSum += r.rating
@@ -139,10 +141,12 @@ export async function buildTasteProfile(userId: string): Promise<UserTasteProfil
         .map(([key, score]) => ({ key, score }))
         .sort((a, b) => b.score - a.score)
 
+    const activeRatings = ratings.filter((r: any) => !r.is_skipped)
+
     return {
       userId,
-      totalRatings: ratings.length,
-      averageRating: totalRatingSum / ratings.length,
+      totalRatings: activeRatings.length,
+      averageRating: activeRatings.length > 0 ? totalRatingSum / activeRatings.length : 0,
       preferredTypes: sortByScore(typeScores).map(({ key, score }) => ({ type: key, score })),
       preferredRegions: Object.entries(regionScores)
         .map(([region, data]) => ({ region, country: data.country, score: data.score }))
@@ -153,7 +157,7 @@ export async function buildTasteProfile(userId: string): Promise<UserTasteProfil
       flavorProfile: Object.entries(descriptorCounts)
         .map(([descriptor, count]) => ({ descriptor, count }))
         .sort((a, b) => b.count - a.count),
-      wouldBuyRate: wouldBuyCount / ratings.length
+      wouldBuyRate: activeRatings.length > 0 ? wouldBuyCount / activeRatings.length : 0
     }
   } catch (err) {
     console.error('Error building taste profile:', err)

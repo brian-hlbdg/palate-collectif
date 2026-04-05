@@ -47,7 +47,8 @@
       "WebFetch(domain:eventee.com)",
       "WebFetch(domain:www.perfectvenue.com)",
       "WebFetch(domain:business.cellarpass.com)",
-      "WebFetch(domain:www.mews.com)"
+      "WebFetch(domain:www.mews.com)",
+      "Bash(npm run:*)"
     ]
   }
 }

@@ -62,6 +62,7 @@ interface UserRating {
   event_wine_id: string
   rating: number
   would_buy: boolean
+  is_skipped?: boolean
 }
 
 export default function BoothWinesPage() {
@@ -156,7 +157,7 @@ export default function BoothWinesPage() {
         const wineIds = wineData.map(w => w.id)
         const { data: ratings } = await supabase
           .from('user_wine_ratings')
-          .select('event_wine_id, rating, would_buy')
+          .select('event_wine_id, rating, would_buy, is_skipped')
           .eq('user_id', currentUserId)
           .in('event_wine_id', wineIds)
 
@@ -187,8 +188,10 @@ export default function BoothWinesPage() {
 
   // Stats
   const totalWines = wines.length
-  const ratedCount = Object.keys(userRatings).length
-  const progressPercent = totalWines > 0 ? (ratedCount / totalWines) * 100 : 0
+  const ratedCount = Object.values(userRatings).filter(r => !r.is_skipped).length
+  const skippedCount = Object.values(userRatings).filter(r => r.is_skipped).length
+  const engagedCount = ratedCount + skippedCount
+  const progressPercent = totalWines > 0 ? (engagedCount / totalWines) * 100 : 0
 
   // Get unique wine types for filter
   const wineTypes = [...new Set(wines.map(w => w.wine_type).filter(Boolean))]
@@ -273,7 +276,7 @@ export default function BoothWinesPage() {
               />
             </div>
             <span className="text-body-xs text-[var(--foreground-muted)] whitespace-nowrap">
-              {ratedCount}/{totalWines}
+              {ratedCount} tasted{skippedCount > 0 ? ` · ${skippedCount} skipped` : ''} / {totalWines}
             </span>
           </div>
         </div>
@@ -379,8 +382,9 @@ export default function BoothWinesPage() {
         ) : (
           <div className="space-y-3">
             {filteredWines.map((wine, index) => {
-              const rating = userRatings[wine.id]
-              const isRated = !!rating
+              const ratingData = userRatings[wine.id]
+              const isSkipped = !!ratingData?.is_skipped
+              const isRated = !!ratingData && !isSkipped
               const flag = wine.country ? countryFlags[wine.country] : null
 
               return (
@@ -396,6 +400,8 @@ export default function BoothWinesPage() {
                     'transition-all duration-200',
                     isRated
                       ? 'border-[var(--wine)]/30'
+                      : isSkipped
+                      ? 'border-[var(--border)] opacity-60'
                       : 'border-[var(--border)] hover:border-[var(--foreground-muted)]'
                   )}
                 >
@@ -447,15 +453,19 @@ export default function BoothWinesPage() {
 
                     {/* Rating status */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {isRated ? (
+                      {isSkipped ? (
+                        <span className="text-body-xs text-[var(--foreground-muted)] px-2 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)]">
+                          Skipped
+                        </span>
+                      ) : isRated ? (
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1">
                             <Star className="h-4 w-4 fill-[var(--wine)] text-[var(--wine)]" />
                             <span className="text-body-sm font-medium text-[var(--foreground)]">
-                              {rating.rating}
+                              {ratingData.rating}
                             </span>
                           </div>
-                          {rating.would_buy && (
+                          {ratingData.would_buy && (
                             <ShoppingBag className="h-4 w-4 text-[var(--wine)]" />
                           )}
                           <Check className="h-5 w-5 text-[var(--wine)]" />

@@ -129,9 +129,11 @@ export interface UserRating {
   rating: number;
   personal_notes?: string;
   is_favorite?: boolean;
+  is_skipped?: boolean;
+  skip_reason?: string;
   created_at: string;
   updated_at?: string;
-  
+
   // Relations (when joined)
   event_wines?: EventWine;
   user_wine_descriptors?: UserWineDescriptor[];
