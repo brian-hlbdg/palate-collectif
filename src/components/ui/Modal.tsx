@@ -126,7 +126,7 @@ export function Modal({
             )}
 
             {/* Body */}
-            <div className="p-6 overflow-y-auto flex-1">{children}</div>
+            <div className="px-6 pb-6 overflow-y-auto flex-1">{children}</div>
           </motion.div>
         </div>
       )}

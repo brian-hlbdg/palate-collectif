@@ -224,7 +224,7 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
     <Modal isOpen={isOpen} onClose={onClose} title={initialWine ? 'Edit Wine' : 'Add Wine'} size="lg">
       <div className="space-y-4">
         {/* Tabs - sticky so always visible while scrolling */}
-        <div className="sticky top-0 z-10 bg-[var(--surface)] flex gap-1 overflow-x-auto pt-1 pb-2 border-b border-[var(--border)] scrollbar-hide -mx-6 px-6">
+        <div className="sticky top-0 z-10 bg-[var(--surface)] flex gap-1 overflow-x-auto pt-5 pb-2 border-b border-[var(--border)] scrollbar-hide -mx-6 px-6 shadow-[0_4px_12px_4px_var(--surface)]">
           {tabs.map((tab) => (
             <button 
               key={tab.id} 
@@ -675,7 +675,7 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
         </div>
 
         {/* Actions - sticky so always visible on mobile */}
-        <div className="sticky bottom-0 flex gap-3 pt-4 border-t border-[var(--border)] bg-[var(--surface)]">
+        <div className="sticky bottom-0 flex gap-3 pt-4 pb-5 border-t border-[var(--border)] bg-[var(--surface)] shadow-[0_-4px_12px_4px_var(--surface)]">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
             Cancel
           </Button>
