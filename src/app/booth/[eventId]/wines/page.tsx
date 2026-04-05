@@ -25,6 +25,7 @@ import {
   Building2,
 } from 'lucide-react'
 import { BuddyConnect } from '@/components/BuddyConnect'
+import { PalatePersonalModal } from '@/components/PalatePersonalModal'
 import { isEventClosed, getEventBuddies } from '@/lib/buddies'
 import Image from 'next/image'
 
@@ -87,6 +88,9 @@ export default function BoothWinesPage() {
   const [showBuddiesPanel, setShowBuddiesPanel] = useState(false)
   const [eventClosed, setEventClosed] = useState(false)
   const [buddyCount, setBuddyCount] = useState(0)
+
+  // Personal modal
+  const [showPersonalModal, setShowPersonalModal] = useState(false)
 
   // Check user
   const checkUser = async () => {
@@ -552,7 +556,7 @@ export default function BoothWinesPage() {
           {/* Save Account button for temp users */}
           {isTempUser && (
             <button
-              onClick={() => router.push('/convert')}
+              onClick={() => setShowPersonalModal(true)}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
             >
               <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--wine)] animate-pulse" />
@@ -615,6 +619,16 @@ export default function BoothWinesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Personal account modal */}
+      <PalatePersonalModal
+        isOpen={showPersonalModal}
+        onClose={() => setShowPersonalModal(false)}
+        stats={{
+          totalRated: Object.values(userRatings).filter(r => !r.is_skipped && r.rating > 0).length,
+          wouldBuyCount: Object.values(userRatings).filter(r => r.would_buy).length,
+        }}
+      />
     </div>
   )
 }

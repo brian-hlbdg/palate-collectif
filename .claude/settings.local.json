@@ -48,7 +48,9 @@
       "WebFetch(domain:www.perfectvenue.com)",
       "WebFetch(domain:business.cellarpass.com)",
       "WebFetch(domain:www.mews.com)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(grep:*)",
+      "Bash(node -e \"require\\('lucide-react'\\)\")"
     ]
   }
 }

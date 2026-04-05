@@ -24,6 +24,8 @@ interface DashboardStats {
   totalAdmins: number
   totalEvents: number
   totalRatings: number
+  totalMembers: number
+  conversionsThisMonth: number
   recentSubmissions: RecentSubmission[]
 }
 
@@ -72,6 +74,20 @@ export default function CuratorDashboard() {
           .from('user_wine_ratings')
           .select('*', { count: 'exact', head: true })
 
+        // Get permanent members (non-admin, non-temp)
+        const { count: memberCount, data: memberProfiles } = await supabase
+          .from('profiles')
+          .select('converted_at', { count: 'exact' })
+          .eq('is_temp_account', false)
+          .eq('is_admin', false)
+
+        const monthStart = new Date()
+        monthStart.setDate(1)
+        monthStart.setHours(0, 0, 0, 0)
+        const conversionsThisMonth = (memberProfiles || []).filter(p =>
+          p.converted_at && new Date(p.converted_at) >= monthStart
+        ).length
+
         // Get user names for recent submissions
         const recentSubmissions: RecentSubmission[] = []
         if (recentPending) {
@@ -98,6 +114,8 @@ export default function CuratorDashboard() {
           totalAdmins: adminCount || 0,
           totalEvents: eventCount || 0,
           totalRatings: ratingCount || 0,
+          totalMembers: memberCount || 0,
+          conversionsThisMonth,
           recentSubmissions,
         })
       } catch (err) {
@@ -163,7 +181,7 @@ export default function CuratorDashboard() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           icon={Database}
           label="Master Wines"
@@ -176,14 +194,44 @@ export default function CuratorDashboard() {
           highlight={stats?.pendingReviews ? stats.pendingReviews > 0 : false}
         />
         <StatCard
-          icon={Users}
-          label="Admins"
-          value={stats?.totalAdmins || 0}
-        />
-        <StatCard
           icon={Calendar}
           label="Events"
           value={stats?.totalEvents || 0}
+        />
+      </div>
+
+      {/* Member stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <Link href="/curator/members" className="block">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 flex items-center gap-4 hover:border-[var(--wine)] transition-colors group">
+            <div className="w-12 h-12 rounded-xl bg-[var(--wine-muted)] flex items-center justify-center flex-shrink-0">
+              <Users className="h-6 w-6 text-[var(--wine)]" />
+            </div>
+            <div>
+              <p className="text-display-sm font-bold text-[var(--foreground)]">
+                {(stats?.totalMembers || 0).toLocaleString()}
+              </p>
+              <p className="text-body-xs text-[var(--foreground-muted)]">Total Members</p>
+            </div>
+          </div>
+        </Link>
+        <Link href="/curator/members" className="block">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 flex items-center gap-4 hover:border-[var(--wine)] transition-colors group">
+            <div className="w-12 h-12 rounded-xl bg-[var(--gold-muted)] flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="h-6 w-6 text-[var(--gold)]" />
+            </div>
+            <div>
+              <p className="text-display-sm font-bold text-[var(--foreground)]">
+                {stats?.conversionsThisMonth || 0}
+              </p>
+              <p className="text-body-xs text-[var(--foreground-muted)]">New Members This Month</p>
+            </div>
+          </div>
+        </Link>
+        <StatCard
+          icon={Star}
+          label="Total Ratings"
+          value={stats?.totalRatings || 0}
         />
       </div>
 

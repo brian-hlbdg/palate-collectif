@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -10,14 +10,15 @@ import { supabase } from '@/lib/supabase'
 import {
   Wine,
   LayoutDashboard,
-  Heart,
+  Calendar,
+  BarChart3,
   Settings,
   LogOut,
   Menu,
   X,
-  User,
-  Library,
-  Sparkles,
+  Users,
+  Package,
+  Ticket,
 } from 'lucide-react'
 
 interface UserProfile {
@@ -36,11 +37,10 @@ export default function UserLayout({
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [newChangelogCount, setNewChangelogCount] = useState(0)
 
-  // Check user auth
   useEffect(() => {
     const checkUser = async () => {
-      // Check Supabase auth session
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session?.user) {
@@ -48,23 +48,23 @@ export default function UserLayout({
           .from('profiles')
           .select('id, display_name, eventbrite_email')
           .eq('id', session.user.id)
-          .single()
+          .maybeSingle()
 
         if (profile) {
           setUser(profile)
+          await loadChangelogBadge()
           setIsLoading(false)
           return
         }
       }
 
-      // Check for temp user
       const tempUserId = localStorage.getItem('palate-temp-user')
       if (tempUserId) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('id, display_name, eventbrite_email')
           .eq('id', tempUserId)
-          .single()
+          .maybeSingle()
 
         if (profile) {
           setUser(profile)
@@ -73,25 +73,44 @@ export default function UserLayout({
         }
       }
 
-      // Not logged in, redirect to login
       router.push('/login')
     }
 
     checkUser()
   }, [router])
 
+  const loadChangelogBadge = async () => {
+    const lastSeen = localStorage.getItem('palate-changelog-last-seen')
+    const query = supabase
+      .from('changelog_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_published', true)
+    if (lastSeen) {
+      query.gt('published_at', lastSeen)
+    }
+    const { count } = await query
+    setNewChangelogCount(count || 0)
+  }
+
   const handleLogout = async () => {
     localStorage.removeItem('palate-temp-user')
     localStorage.removeItem('palate-current-event')
+    localStorage.removeItem('palate-user')
     await supabase.auth.signOut()
     router.push('/login')
   }
 
+  const handleChangelogClick = () => {
+    localStorage.setItem('palate-changelog-last-seen', new Date().toISOString())
+    setNewChangelogCount(0)
+  }
+
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/collection', icon: Library, label: 'My Collection' },
-    { href: '/favorites', icon: Heart, label: 'Would Buy' },
-    { href: '/profile', icon: Sparkles, label: 'Taste Profile' },
+    { href: '/dashboard/events', icon: Calendar, label: 'My Events' },
+    { href: '/profile', icon: BarChart3, label: 'My Palate' },
+    { href: '/buddies', icon: Users, label: 'Buddies' },
+    { href: '/changelog', icon: Package, label: "What's New", badge: newChangelogCount > 0 ? newChangelogCount : undefined },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -103,29 +122,127 @@ export default function UserLayout({
     )
   }
 
-  if (!user) {
-    return null // Will redirect to login
-  }
+  if (!user) return null
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      {/* Mobile header */}
-      <header className="sticky top-0 z-40 bg-[var(--surface)]/80 backdrop-blur-xl border-b border-[var(--border)]">
-        <div className="flex items-center justify-between h-16 px-4">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--wine-muted)] flex items-center justify-center">
-              <Wine className="h-5 w-5 text-[var(--wine)]" />
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex flex-col flex-1 bg-[var(--surface)] border-r border-[var(--border)]">
+          {/* Logo */}
+          <div className="flex items-center gap-3 h-16 px-6 border-b border-[var(--border)]">
+            <Wine className="h-8 w-8 text-[var(--wine)]" />
+            <div>
+              <span className="text-body-lg font-semibold text-[var(--foreground)]">
+                Palate
+              </span>
+              <span className="text-body-xs text-[var(--foreground-muted)] block -mt-1">
+                My Account
+              </span>
             </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-6 space-y-1">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href ||
+                (item.href !== '/dashboard' && pathname.startsWith(item.href))
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={item.href === '/changelog' ? handleChangelogClick : undefined}
+                  className={cn(
+                    'flex items-center justify-between px-4 py-3 rounded-xl',
+                    'text-body-md font-medium',
+                    'transition-all duration-200',
+                    isActive
+                      ? 'bg-[var(--wine-muted)] text-[var(--wine)]'
+                      : 'text-[var(--foreground-secondary)] hover:bg-[var(--hover-overlay)] hover:text-[var(--foreground)]'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                  </div>
+                  {'badge' in item && item.badge && (
+                    <span className="px-2 py-0.5 rounded-full text-body-xs font-semibold bg-[var(--wine)] text-white">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
+
+            {/* Join event action */}
+            <div className="pt-4">
+              <Link
+                href="/join"
+                className={cn(
+                  'flex items-center justify-center gap-2',
+                  'w-full px-4 py-3 rounded-xl',
+                  'bg-[var(--wine)]',
+                  'text-body-md font-medium',
+                  'hover:opacity-90',
+                  'transition-opacity duration-200'
+                )}
+                style={{ color: '#ffffff' }}
+              >
+                <Ticket className="h-5 w-5" />
+                Join an Event
+              </Link>
+            </div>
+          </nav>
+
+          {/* User section */}
+          <div className="p-4 border-t border-[var(--border)]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-[var(--wine-muted)] flex items-center justify-center">
+                <span className="text-body-md font-semibold text-[var(--wine)]">
+                  {user.display_name?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-body-sm font-medium text-[var(--foreground)] truncate">
+                  {user.display_name}
+                </p>
+                <p className="text-body-xs text-[var(--foreground-muted)]">
+                  Member
+                </p>
+              </div>
+              <ThemeToggle />
+            </div>
+            <button
+              onClick={handleLogout}
+              className={cn(
+                'flex items-center gap-2 w-full px-4 py-2 rounded-lg',
+                'text-body-sm text-[var(--foreground-secondary)]',
+                'hover:bg-[var(--hover-overlay)] hover:text-[var(--foreground)]',
+                'transition-colors duration-200'
+              )}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile header */}
+      <header className="lg:hidden sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--border)]">
+        <div className="flex items-center justify-between h-16 px-4">
+          <div className="flex items-center gap-3">
+            <Wine className="h-7 w-7 text-[var(--wine)]" />
             <span className="text-body-lg font-semibold text-[var(--foreground)]">
               Palate
             </span>
-          </Link>
-
+          </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl hover:bg-[var(--hover-overlay)] transition-colors lg:hidden"
+              className="p-2 rounded-xl hover:bg-[var(--hover-overlay)] transition-colors"
             >
               {mobileMenuOpen ? (
                 <X className="h-6 w-6 text-[var(--foreground)]" />
@@ -136,40 +253,64 @@ export default function UserLayout({
           </div>
         </div>
 
-        {/* Mobile menu */}
         {mobileMenuOpen && (
           <motion.nav
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-[var(--border)] bg-[var(--surface)] lg:hidden"
+            className="border-t border-[var(--border)] bg-[var(--surface)]"
           >
             <div className="p-4 space-y-1">
               {navItems.map((item) => {
-                const isActive = pathname === item.href
+                const isActive = pathname === item.href ||
+                  (item.href !== '/dashboard' && pathname.startsWith(item.href))
 
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      if (item.href === '/changelog') handleChangelogClick()
+                    }}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-xl',
+                      'flex items-center justify-between px-4 py-3 rounded-xl',
                       'text-body-md font-medium',
                       isActive
                         ? 'bg-[var(--wine-muted)] text-[var(--wine)]'
                         : 'text-[var(--foreground-secondary)]'
                     )}
                   >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
+                    <div className="flex items-center gap-3">
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                    </div>
+                    {'badge' in item && item.badge && (
+                      <span className="px-2 py-0.5 rounded-full text-body-xs font-semibold bg-[var(--wine)] text-white">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 )
               })}
+              <Link
+                href="/join"
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  'flex items-center justify-center gap-2',
+                  'w-full px-4 py-3 rounded-xl mt-4',
+                  'bg-[var(--wine)]',
+                  'text-body-md font-medium'
+                )}
+                style={{ color: '#ffffff' }}
+              >
+                <Ticket className="h-5 w-5" />
+                Join an Event
+              </Link>
               <button
                 onClick={handleLogout}
                 className={cn(
-                  'flex items-center gap-3 w-full px-4 py-3 rounded-xl',
+                  'flex items-center gap-2 w-full px-4 py-3 rounded-xl',
                   'text-body-md text-[var(--foreground-secondary)]'
                 )}
               >
@@ -179,60 +320,14 @@ export default function UserLayout({
             </div>
           </motion.nav>
         )}
-
-        {/* Desktop navigation */}
-        <nav className="hidden lg:flex items-center justify-center gap-1 pb-3 px-4">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-xl',
-                  'text-body-md font-medium',
-                  'transition-colors duration-200',
-                  isActive
-                    ? 'bg-[var(--wine-muted)] text-[var(--wine)]'
-                    : 'text-[var(--foreground-secondary)] hover:bg-[var(--hover-overlay)] hover:text-[var(--foreground)]'
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
       </header>
 
       {/* Main content */}
-      <main className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-        {children}
+      <main className="lg:pl-64">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-5xl">
+          {children}
+        </div>
       </main>
-
-      {/* Desktop user dropdown in corner */}
-      <div className="hidden lg:block fixed bottom-4 right-4">
-        <button
-          onClick={handleLogout}
-          className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-xl',
-            'bg-[var(--surface)] border border-[var(--border)]',
-            'text-body-sm text-[var(--foreground-secondary)]',
-            'hover:border-[var(--border-secondary)] hover:text-[var(--foreground)]',
-            'shadow-[var(--shadow-elevation-1)]',
-            'transition-all duration-200'
-          )}
-        >
-          <div className="w-8 h-8 rounded-full bg-[var(--wine-muted)] flex items-center justify-center">
-            <span className="text-body-sm font-semibold text-[var(--wine)]">
-              {user.display_name?.charAt(0).toUpperCase() || 'U'}
-            </span>
-          </div>
-          <span className="max-w-[120px] truncate">{user.display_name}</span>
-          <LogOut className="h-4 w-4 ml-1" />
-        </button>
-      </div>
     </div>
   )
 }

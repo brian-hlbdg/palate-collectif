@@ -225,7 +225,8 @@ export async function getUserBuddies(userId: string): Promise<Buddy[]> {
     if (error) throw error
     return data || []
   } catch (err) {
-    console.error('Error getting buddies:', err)
+    const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? JSON.stringify(err)
+    console.error('Error getting buddies:', msg)
     return []
   }
 }

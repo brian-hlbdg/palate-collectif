@@ -31,6 +31,10 @@ const ADMIN_EMAIL = 'demo.admin@palatecollectif.com'
 const ADMIN_PASSWORD = 'DemoAdmin2025!'
 const ADMIN_NAME = 'Demo Admin'
 
+const MEMBER_EMAIL = 'demo.member@palatecollectif.com'
+const MEMBER_PASSWORD = 'DemoMember2025!'
+const MEMBER_NAME = 'Demo Member'
+
 // ─── Event codes ─────────────────────────────────────────────────────────────
 const BOOTH_CODE = 'BOOTH01'
 const CRAWL_CODE = 'CRAWL01'
@@ -81,7 +85,41 @@ async function seed() {
   if (profileError) { console.error('Failed to upsert admin profile:', profileError.message); process.exit(1) }
   ok(`Admin profile ready (id: ${adminId})`)
 
-  // 3. Delete stale demo events (so re-running the script is safe)
+  // 3. Create or fetch permanent member auth user
+  section('Permanent Member Account')
+  let memberId
+
+  const existingMember = existingUsers?.users?.find(u => u.email === MEMBER_EMAIL)
+
+  if (existingMember) {
+    memberId = existingMember.id
+    skip(`Auth user ${MEMBER_EMAIL}`)
+  } else {
+    const { data: newMember, error: memberAuthErr } = await supabase.auth.admin.createUser({
+      email: MEMBER_EMAIL,
+      password: MEMBER_PASSWORD,
+      email_confirm: true,
+    })
+    if (memberAuthErr) { console.error('Failed to create member auth user:', memberAuthErr.message); process.exit(1) }
+    memberId = newMember.user.id
+    ok(`Created auth user: ${MEMBER_EMAIL} / ${MEMBER_PASSWORD}`)
+  }
+
+  // Upsert member profile
+  const { error: memberProfileErr } = await supabase
+    .from('profiles')
+    .upsert({
+      id: memberId,
+      display_name: MEMBER_NAME,
+      eventbrite_email: MEMBER_EMAIL,
+      is_admin: false,
+      is_temp_account: false,
+    }, { onConflict: 'id' })
+
+  if (memberProfileErr) { console.error('Failed to upsert member profile:', memberProfileErr.message); process.exit(1) }
+  ok(`Member profile ready (id: ${memberId})`)
+
+  // 4. Delete stale demo events (so re-running the script is safe)
   section('Clearing Old Demo Events')
   const { data: oldEvents } = await supabase
     .from('tasting_events')
@@ -241,12 +279,81 @@ async function seed() {
   if (festWineErr) { console.error('Festival wine insert error:', festWineErr.message, festWineErr.details, festWineErr.hint); process.exit(1) }
   ok('Added 8 wines to festival event')
 
+  // ── Seed ratings for demo member ──────────────────────────────────────────
+  section('Demo Member — Seeding Past Ratings')
+
+  // Pull the wine IDs we just created so we can attach ratings to them
+  const { data: crawlWines } = await supabase
+    .from('event_wines')
+    .select('id, wine_name, wine_type')
+    .eq('event_id', crawlEvent.id)
+
+  const { data: festWines } = await supabase
+    .from('event_wines')
+    .select('id, wine_name, wine_type')
+    .eq('event_id', festEvent.id)
+
+  // Delete any existing demo member ratings first (idempotent)
+  const allWineIds = [...(crawlWines || []), ...(festWines || [])].map(w => w.id)
+  if (allWineIds.length) {
+    await supabase
+      .from('user_wine_ratings')
+      .delete()
+      .eq('user_id', memberId)
+      .in('event_wine_id', allWineIds)
+  }
+
+  // Crawl ratings — member rated all 6 wines
+  const crawlRatings = (crawlWines || []).map((w, i) => ({
+    user_id: memberId,
+    event_wine_id: w.id,
+    rating: [4, 5, 3, 5, 4, 3][i % 6],
+    would_buy: [true, true, false, true, false, false][i % 6],
+    personal_notes: [
+      'Loved the dark fruit and structure',
+      'Favourite of the night — jammy and bold',
+      null,
+      'Crisp and clean, exactly what I wanted',
+      null,
+      null,
+    ][i % 6],
+  }))
+
+  // Festival ratings — member rated 6 of the 8 wines (skipped 2)
+  const festRatings = (festWines || []).slice(0, 6).map((w, i) => ({
+    user_id: memberId,
+    event_wine_id: w.id,
+    rating: [5, 4, 4, 5, 3, 4][i % 6],
+    would_buy: [true, false, true, true, false, false][i % 6],
+    personal_notes: [
+      'Incredible — worth every penny',
+      'Pure and mineral, loved it',
+      null,
+      'Best Pinot I have ever had',
+      null,
+      null,
+    ][i % 6],
+  }))
+
+  const { error: ratingsErr } = await supabase
+    .from('user_wine_ratings')
+    .insert([...crawlRatings, ...festRatings])
+
+  if (ratingsErr) { console.error('Failed to seed member ratings:', ratingsErr.message) }
+  else { ok(`Seeded ${crawlRatings.length + festRatings.length} ratings for demo member`) }
+
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log('\n=== Seed Complete ===\n')
   console.log('ADMIN LOGIN')
   console.log(`  URL:      /admin/login`)
   console.log(`  Email:    ${ADMIN_EMAIL}`)
   console.log(`  Password: ${ADMIN_PASSWORD}`)
+  console.log()
+  console.log('MEMBER LOGIN')
+  console.log(`  URL:      /login`)
+  console.log(`  Email:    ${MEMBER_EMAIL}`)
+  console.log(`  Password: ${MEMBER_PASSWORD}`)
+  console.log(`  History:  Ratings seeded across Wine Crawl + Festival events`)
   console.log()
   console.log('BOOTH EVENT')
   console.log(`  URL:      /booth/${BOOTH_CODE}`)

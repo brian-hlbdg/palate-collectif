@@ -180,23 +180,23 @@ export function AccountConversion({
   const benefits = [
     {
       icon: Wine,
-      title: 'Keep Your Ratings',
-      description: 'All your wine ratings and notes are preserved'
-    },
-    {
-      icon: Sparkles,
-      title: 'Personalized Recommendations',
-      description: 'Get wine suggestions based on your taste profile'
+      title: 'Your ratings, saved',
+      description: 'Nothing disappears when the event ends — it\'s all yours to keep'
     },
     {
       icon: Star,
-      title: 'Track Your Journey',
-      description: 'Build a complete history of wines you\'ve tasted'
+      title: 'Your tasting history',
+      description: 'Every event, every wine, every note — one place, building over time'
+    },
+    {
+      icon: Sparkles,
+      title: 'Start understanding your palate',
+      description: 'Patterns in what you like become clearer the more you taste'
     },
     {
       icon: Shield,
-      title: 'Secure Access',
-      description: 'Access your data from any device, anytime'
+      title: 'Access from anywhere',
+      description: 'Your account works across any event, any device'
     }
   ]
 
@@ -212,7 +212,7 @@ export function AccountConversion({
             Save Your Wine Journey
           </h2>
           <p className="text-body-md text-[var(--foreground-secondary)]">
-            Create a free account to keep your ratings forever
+            Create an account to keep your ratings forever
           </p>
         </div>
 
@@ -274,7 +274,7 @@ export function AccountConversion({
             onClick={() => setStep('form')}
             rightIcon={<ArrowRight className="h-5 w-5" />}
           >
-            Create Free Account
+            Create Account
           </Button>
           
           {onSkip && (
@@ -376,10 +376,10 @@ export function AccountConversion({
 
         <div>
           <h2 className="text-display-sm font-bold text-[var(--foreground)] mb-2">
-            Welcome Aboard! 🎉
+            You're all set
           </h2>
           <p className="text-body-md text-[var(--foreground-secondary)]">
-            Your account is ready. All your ratings have been saved.
+            Your account is ready. Everything you've tasted is saved.
           </p>
         </div>
 

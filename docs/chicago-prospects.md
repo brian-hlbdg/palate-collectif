@@ -75,6 +75,7 @@ Chicago is an ideal first market for Palate. The city has a dense, sophisticated
 3. Brix Catering & Events — turnkey partnership, they bring the events
 4. Volo, Rootstock, Pompette — independent wine bars, owner-operated, faster decisions
 
-**Second wave (fine dining + hotels):**
+**Second wave (fine dining, hotels, and focused wine bars):**
 - Acanto, Spiaggia, Oriole — premium reference clients, slower sales cycle
-- The Gwen, Lacuna Events — venue scale justifies higher-tier pricing conversation
+- The Gwen, Lacuna Events — venue scale justifies Annual License or Enterprise conversation
+- Pops for Champagne — strong fit for champagne-focused tasting events; confirm they run structured tastings (vs. casual open-floor service) before pitching

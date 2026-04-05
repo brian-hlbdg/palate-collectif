@@ -300,6 +300,41 @@ export default function BetaPage() {
 
             <div className="border-t border-[var(--border)]" />
 
+            {/* ── Permanent Member ──────────────────────────────────── */}
+            <section>
+              <SectionBadge><Star className="h-3 w-3 mr-1" />Member Account</SectionBadge>
+              <h3 className="text-display-sm font-bold text-[var(--foreground)] mb-2">Member Dashboard</h3>
+              <p className="text-body-md text-[var(--foreground-secondary)] mb-5">
+                The member dashboard is what a returning guest sees after creating a permanent account. Their tasting history is saved, their palate builds over time, and they can see every event they've attended.
+              </p>
+
+              <Card variant="outlined" padding="lg" className="mb-4">
+                <p className="text-label-md text-[var(--foreground)] mb-3">Login credentials</p>
+                <CredentialRow label="Email" value="demo.member@palatecollectif.com" />
+                <CredentialRow label="Password" value="DemoMember2025!" />
+              </Card>
+
+              <Card variant="outlined" padding="md" className="mb-5">
+                <p className="text-body-sm text-[var(--foreground-secondary)] mb-3">
+                  <strong className="text-[var(--foreground)]">Things to try:</strong>
+                </p>
+                <ul className="space-y-2 text-body-sm text-[var(--foreground-secondary)]">
+                  <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-[var(--wine)] mt-0.5 flex-shrink-0" />View the dashboard — ratings and events are pre-seeded from the Wine Crawl and Festival</li>
+                  <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-[var(--wine)] mt-0.5 flex-shrink-0" />Go to My Events to see the full tasting history</li>
+                  <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-[var(--wine)] mt-0.5 flex-shrink-0" />Open My Palate to see the taste profile built from those ratings</li>
+                  <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-[var(--wine)] mt-0.5 flex-shrink-0" />Try the Suggest and Host an Event buttons on the dashboard</li>
+                </ul>
+              </Card>
+
+              <Link href="/login">
+                <Button rightIcon={<ArrowRight className="h-4 w-4" />}>
+                  Go to Member Login
+                </Button>
+              </Link>
+            </section>
+
+            <div className="border-t border-[var(--border)]" />
+
             {/* ── Shared Features ───────────────────────────────────── */}
             <section>
               <h3 className="text-display-sm font-bold text-[var(--foreground)] mb-6">Features in every event</h3>

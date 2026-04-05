@@ -16,7 +16,10 @@ import {
   ShoppingBag,
   ChevronRight,
   Sparkles,
-  Trophy,
+  MessageSquarePlus,
+  CalendarPlus,
+  X,
+  Check,
 } from 'lucide-react'
 
 interface UserStats {
@@ -58,11 +61,71 @@ export default function DashboardPage() {
   const [events, setEvents] = useState<EventSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Get user ID from auth or localStorage
+  // Suggestion modal
+  const [showSuggestion, setShowSuggestion] = useState(false)
+  const [suggestionCategory, setSuggestionCategory] = useState('Feature')
+  const [suggestionTitle, setSuggestionTitle] = useState('')
+  const [suggestionBody, setSuggestionBody] = useState('')
+  const [suggestionSent, setSuggestionSent] = useState(false)
+  const [suggestionLoading, setSuggestionLoading] = useState(false)
+
+  // Host inquiry modal
+  const [showHostInquiry, setShowHostInquiry] = useState(false)
+  const [inquiryName, setInquiryName] = useState('')
+  const [inquiryVenue, setInquiryVenue] = useState('')
+  const [inquiryGuests, setInquiryGuests] = useState('')
+  const [inquiryNotes, setInquiryNotes] = useState('')
+  const [inquirySent, setInquirySent] = useState(false)
+  const [inquiryLoading, setInquiryLoading] = useState(false)
+
+  const [userId, setUserId] = useState<string | null>(null)
+
   const getUserId = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) return session.user.id
     return localStorage.getItem('palate-temp-user')
+  }
+
+  const handleSendSuggestion = async () => {
+    if (!suggestionTitle.trim()) return
+    setSuggestionLoading(true)
+    try {
+      await supabase.from('admin_suggestions').insert({
+        admin_id: userId,
+        category: suggestionCategory,
+        title: suggestionTitle.trim(),
+        description: suggestionBody.trim(),
+        status: 'pending',
+      })
+      setSuggestionSent(true)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSuggestionLoading(false)
+    }
+  }
+
+  const handleHostInquiry = async () => {
+    if (!inquiryName.trim()) return
+    setInquiryLoading(true)
+    try {
+      await supabase.from('admin_suggestions').insert({
+        admin_id: userId,
+        category: 'Hosting Inquiry',
+        title: `Host inquiry from ${inquiryName.trim()}`,
+        description: [
+          inquiryVenue ? `Venue: ${inquiryVenue}` : null,
+          inquiryGuests ? `Expected guests: ${inquiryGuests}` : null,
+          inquiryNotes ? `Notes: ${inquiryNotes}` : null,
+        ].filter(Boolean).join('\n'),
+        status: 'pending',
+      })
+      setInquirySent(true)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setInquiryLoading(false)
+    }
   }
 
   // Load dashboard data
@@ -70,6 +133,7 @@ export default function DashboardPage() {
     const loadDashboard = async () => {
       const userId = await getUserId()
       if (!userId) return
+      setUserId(userId)
 
       try {
         // Get all user ratings with wine and event info
@@ -179,13 +243,31 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-display-md font-bold text-[var(--foreground)]">
-          Your Wine Journey
-        </h1>
-        <p className="text-body-md text-[var(--foreground-secondary)] mt-1">
-          Track your tastings and discover your preferences
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-display-md font-bold text-[var(--foreground)]">
+            Your Wine Journey
+          </h1>
+          <p className="text-body-md text-[var(--foreground-secondary)] mt-1">
+            Track your tastings and discover your preferences
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => { setShowSuggestion(true); setSuggestionSent(false) }}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-body-sm font-medium text-[var(--foreground-secondary)] hover:bg-[var(--hover-overlay)] hover:text-[var(--foreground)] transition-colors border border-[var(--border)]"
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Suggest</span>
+          </button>
+          <button
+            onClick={() => { setShowHostInquiry(true); setInquirySent(false) }}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-body-sm font-medium text-[var(--wine)] bg-[var(--wine-muted)] hover:bg-[var(--wine-muted)]/80 transition-colors"
+          >
+            <CalendarPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Host an Event</span>
+          </button>
+        </div>
       </div>
 
       {stats?.totalRatings === 0 ? (
@@ -341,6 +423,134 @@ export default function DashboardPage() {
             </Button>
           </Card>
         </>
+      )}
+
+      {/* Send Suggestion Modal */}
+      {showSuggestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowSuggestion(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-body-lg font-semibold text-[var(--foreground)]">Send a Suggestion</h2>
+              <button onClick={() => setShowSuggestion(false)} className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground)]">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {suggestionSent ? (
+              <div className="text-center py-4 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                  <Check className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-body-md font-medium text-[var(--foreground)]">Thanks for the feedback!</p>
+                <p className="text-body-sm text-[var(--foreground-secondary)]">We read every suggestion.</p>
+                <Button variant="secondary" fullWidth onClick={() => setShowSuggestion(false)}>Close</Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2 flex-wrap">
+                  {['Feature', 'Improvement', 'Bug', 'Other'].map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSuggestionCategory(cat)}
+                      className={`px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors ${
+                        suggestionCategory === cat
+                          ? 'bg-[var(--wine)] text-white'
+                          : 'bg-[var(--background)] text-[var(--foreground-secondary)] hover:text-[var(--foreground)]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-body-md text-[var(--foreground)] placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--wine)]"
+                  placeholder="Title"
+                  value={suggestionTitle}
+                  onChange={e => setSuggestionTitle(e.target.value)}
+                />
+                <textarea
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-body-md text-[var(--foreground)] placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--wine)] resize-none"
+                  placeholder="Tell us more (optional)"
+                  rows={3}
+                  value={suggestionBody}
+                  onChange={e => setSuggestionBody(e.target.value)}
+                />
+                <Button fullWidth onClick={handleSendSuggestion} isLoading={suggestionLoading} disabled={!suggestionTitle.trim()}>
+                  Send Suggestion
+                </Button>
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* Host Inquiry Modal */}
+      {showHostInquiry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowHostInquiry(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-body-lg font-semibold text-[var(--foreground)]">Interested in Hosting?</h2>
+              <button onClick={() => setShowHostInquiry(false)} className="p-1 text-[var(--foreground-muted)] hover:text-[var(--foreground)]">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {inquirySent ? (
+              <div className="text-center py-4 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                  <Check className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-body-md font-medium text-[var(--foreground)]">We'll be in touch!</p>
+                <p className="text-body-sm text-[var(--foreground-secondary)]">We'll reach out with pricing and next steps.</p>
+                <Button variant="secondary" fullWidth onClick={() => setShowHostInquiry(false)}>Close</Button>
+              </div>
+            ) : (
+              <>
+                <p className="text-body-sm text-[var(--foreground-secondary)]">
+                  Tell us a little about what you have in mind and we'll follow up with pricing and details.
+                </p>
+                <input
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-body-md text-[var(--foreground)] placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--wine)]"
+                  placeholder="Your name"
+                  value={inquiryName}
+                  onChange={e => setInquiryName(e.target.value)}
+                />
+                <input
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-body-md text-[var(--foreground)] placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--wine)]"
+                  placeholder="Venue or setting (optional)"
+                  value={inquiryVenue}
+                  onChange={e => setInquiryVenue(e.target.value)}
+                />
+                <input
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-body-md text-[var(--foreground)] placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--wine)]"
+                  placeholder="Expected number of guests (optional)"
+                  value={inquiryGuests}
+                  onChange={e => setInquiryGuests(e.target.value)}
+                />
+                <textarea
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-body-md text-[var(--foreground)] placeholder:text-[var(--foreground-muted)] focus:outline-none focus:border-[var(--wine)] resize-none"
+                  placeholder="Anything else we should know? (optional)"
+                  rows={3}
+                  value={inquiryNotes}
+                  onChange={e => setInquiryNotes(e.target.value)}
+                />
+                <Button fullWidth onClick={handleHostInquiry} isLoading={inquiryLoading} disabled={!inquiryName.trim()}>
+                  Send Inquiry
+                </Button>
+              </>
+            )}
+          </motion.div>
+        </div>
       )}
     </div>
   )

@@ -30,14 +30,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (error) {
-      console.error('Error fetching user profile:', error)
+      console.error('Error fetching user profile:', error.message ?? error)
       return null
     }
 
-    return data as User
+    return (data as User) ?? null
   }
 
   // Initialize auth state

@@ -11,6 +11,7 @@ import {
   Database,
   BarChart3,
   Users,
+  UserCheck,
   Activity,
   LogOut,
   Menu,
@@ -115,10 +116,15 @@ export default function CuratorLayout({
       icon: BarChart3, 
       label: 'Analytics',
     },
-    { 
-      href: '/curator/admins', 
-      icon: Users, 
+    {
+      href: '/curator/admins',
+      icon: Users,
       label: 'Admins',
+    },
+    {
+      href: '/curator/members',
+      icon: UserCheck,
+      label: 'Members',
     },
     { 
       href: '/curator/groups', 

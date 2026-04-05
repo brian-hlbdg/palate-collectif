@@ -16,7 +16,9 @@ import {
   Trophy,
   TrendingUp,
   Sparkles,
+  BookMarked,
 } from 'lucide-react'
+import { PalatePersonalModal } from '@/components/PalatePersonalModal'
 
 interface EventDetails {
   id: string
@@ -59,10 +61,15 @@ export default function EventProfilePage() {
   const [totalWines, setTotalWines] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [sortBy, setSortBy] = useState<'order' | 'rating'>('rating')
+  const [showPersonalModal, setShowPersonalModal] = useState(false)
 
   const userId = typeof window !== 'undefined'
     ? localStorage.getItem('palate-temp-user')
     : null
+
+  const isTempUser = typeof window !== 'undefined'
+    ? !!localStorage.getItem('palate-temp-user') && !localStorage.getItem('palate-user')
+    : false
 
   // Load data
   useEffect(() => {
@@ -385,9 +392,45 @@ export default function EventProfilePage() {
                 </Button>
               </Card>
             )}
+
+            {/* Save journey prompt for temp users */}
+            {isTempUser && ratedWines.length > 0 && (
+              <Card variant="wine" padding="md" className="mt-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--wine)] flex items-center justify-center flex-shrink-0">
+                    <BookMarked className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-body-md font-semibold text-[var(--foreground)]">
+                      Save your wine journey
+                    </h3>
+                    <p className="text-body-sm text-[var(--foreground-secondary)] mt-1">
+                      These ratings disappear in 7 days. Keep them — and every tasting after this one.
+                    </p>
+                    <Button
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => setShowPersonalModal(true)}
+                    >
+                      Learn more
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
           </>
         )}
       </main>
+
+      <PalatePersonalModal
+        isOpen={showPersonalModal}
+        onClose={() => setShowPersonalModal(false)}
+        stats={{
+          totalRated: stats.totalRated,
+          wouldBuyCount: stats.wouldBuyCount,
+          favoriteType: stats.favoriteType,
+        }}
+      />
     </div>
   )
 }
