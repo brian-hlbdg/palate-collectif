@@ -86,8 +86,9 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             className={cn(
-              'relative w-full',
+              'relative w-full flex flex-col',
               sizeClasses[size],
+              'max-h-[calc(100dvh-2rem)]',
               'bg-[var(--surface)]',
               'rounded-2xl',
               'shadow-[var(--shadow-elevation-3)]',
@@ -98,7 +99,7 @@ export function Modal({
           >
             {/* Header */}
             {(title || showCloseButton) && (
-              <div className="flex items-start justify-between p-6 pb-0">
+              <div className="flex-shrink-0 flex items-start justify-between p-6 pb-0">
                 <div className="flex-1 pr-4">
                   {title && (
                     <h2 className="text-display-sm font-semibold text-[var(--foreground)]">
@@ -125,7 +126,7 @@ export function Modal({
             )}
 
             {/* Body */}
-            <div className="p-6">{children}</div>
+            <div className="p-6 overflow-y-auto flex-1">{children}</div>
           </motion.div>
         </div>
       )}

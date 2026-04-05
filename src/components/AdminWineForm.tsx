@@ -223,8 +223,8 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={initialWine ? 'Edit Wine' : 'Add Wine'} size="lg">
       <div className="space-y-4">
-        {/* Tabs */}
-        <div className="flex gap-1 overflow-x-auto pb-2 border-b border-[var(--border)] scrollbar-hide">
+        {/* Tabs - sticky so always visible while scrolling */}
+        <div className="sticky top-0 z-10 bg-[var(--surface)] flex gap-1 overflow-x-auto pt-1 pb-2 border-b border-[var(--border)] scrollbar-hide -mx-6 px-6">
           {tabs.map((tab) => (
             <button 
               key={tab.id} 
@@ -243,7 +243,7 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
         </div>
 
         {/* Tab Content with fixed height and smooth transitions */}
-        <div className="min-h-[420px] relative overflow-hidden">
+        <div className="min-h-[420px] relative overflow-hidden pt-2">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={activeTab}
@@ -674,15 +674,15 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
           </AnimatePresence>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
+        {/* Actions - sticky so always visible on mobile */}
+        <div className="sticky bottom-0 flex gap-3 pt-4 border-t border-[var(--border)] bg-[var(--surface)]">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
             Cancel
           </Button>
-          <Button 
-            className="flex-1" 
-            onClick={handleSave} 
-            isLoading={isSaving} 
+          <Button
+            className="flex-1"
+            onClick={handleSave}
+            isLoading={isSaving}
             leftIcon={<Save className="h-4 w-4" />}
           >
             {initialWine ? 'Update Wine' : 'Add Wine'}

@@ -681,8 +681,8 @@ function WineModal({
         />
       </div>
 
-      {/* Footer */}
-      <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-[var(--border)]">
+      {/* Footer - sticky so always visible on mobile */}
+      <div className="sticky bottom-0 flex gap-3 justify-end pt-4 pb-0 mt-6 border-t border-[var(--border)] bg-[var(--surface)]">
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
