@@ -150,9 +150,10 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
       }
       onSave?.()
       onClose()
-    } catch (err) { 
-      console.error('Error saving wine:', err)
-      addToast({ type: 'error', message: 'Failed to save wine' }) 
+    } catch (err) {
+      const supaErr = err as { message?: string; details?: string; hint?: string; code?: string }
+      console.error('Error saving wine:', supaErr?.message, supaErr?.details, supaErr?.hint, supaErr?.code)
+      addToast({ type: 'error', message: supaErr?.message || 'Failed to save wine' })
     } finally { 
       setIsSaving(false) 
     }
