@@ -126,7 +126,7 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
         price_point: wine.price_point || null, 
         alcohol_content: wine.alcohol_content ? parseFloat(wine.alcohol_content) : null,
         sommelier_notes: wine.sommelier_notes.trim() || null, 
-        image_url: wine.image_url.trim() || null,
+        image_url: wine.image_url?.trim() || null,
         grape_varieties: wine.grape_varieties.length > 0 ? wine.grape_varieties : null,
         wine_style: wine.wine_style.length > 0 ? wine.wine_style : null,
         food_pairings: wine.food_pairings.length > 0 ? wine.food_pairings : null,
