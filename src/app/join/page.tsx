@@ -259,7 +259,7 @@ export default function JoinEventPage() {
                   <form onSubmit={handleJoinEvent} className="space-y-4">
                     <Input
                       label="Your Name"
-                      placeholder="How should we call you?"
+                      placeholder="What's your name?"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       leftIcon={<User className="h-5 w-5" />}
