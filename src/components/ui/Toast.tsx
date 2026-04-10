@@ -58,10 +58,10 @@ function ToastContainer() {
   return (
     <div
       className={cn(
-        'fixed bottom-0 right-0 z-50',
-        'p-4 space-y-3',
+        'fixed top-4 left-4 right-4 z-50',
+        'space-y-3',
         'pointer-events-none',
-        'max-w-md w-full'
+        'max-w-md mx-auto'
       )}
     >
       <AnimatePresence mode="popLayout">
@@ -86,11 +86,11 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
     info: <Info className="h-5 w-5 text-[var(--wine)]" />,
   }
 
-  const bgColors = {
-    success: 'bg-success/5 border-success/20',
-    error: 'bg-error/5 border-error/20',
-    warning: 'bg-warning/5 border-warning/20',
-    info: 'bg-[var(--wine-muted)] border-[var(--border-accent)]',
+  const borderColors = {
+    success: 'border-l-4 border-l-success border-[var(--border)]',
+    error: 'border-l-4 border-l-error border-[var(--border)]',
+    warning: 'border-l-4 border-l-warning border-[var(--border)]',
+    info: 'border-l-4 border-l-[var(--wine)] border-[var(--border)]',
   }
 
   return (
@@ -105,8 +105,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
         'flex items-start gap-3',
         'p-4 rounded-xl',
         'bg-[var(--surface)]',
-        'border',
-        bgColors[toast.type],
+        borderColors[toast.type],
         'shadow-[var(--shadow-elevation-2)]'
       )}
     >

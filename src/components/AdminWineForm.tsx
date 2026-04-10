@@ -87,6 +87,13 @@ export function AdminWineForm({ isOpen, onClose, eventId, initialWine, onSave, l
     if (initialWine) {
       setWine({
         ...emptyWine, ...initialWine,
+        producer: initialWine.producer ?? '',
+        region: initialWine.region ?? '',
+        country: initialWine.country ?? '',
+        sommelier_notes: initialWine.sommelier_notes ?? '',
+        image_url: initialWine.image_url ?? '',
+        food_pairing_notes: initialWine.food_pairing_notes ?? '',
+        winemaker_notes: initialWine.winemaker_notes ?? '',
         grape_varieties: initialWine.grape_varieties || [],
         wine_style: initialWine.wine_style || [],
         food_pairings: initialWine.food_pairings || [],
