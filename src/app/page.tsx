@@ -730,14 +730,34 @@ export default function HomePage() {
                   ],
                 },
                 {
-                  version: 'v2.1',
+                  version: 'v2.4',
                   label: 'latest',
-                  date: 'Nov 2025',
+                  date: 'May–Jun 2026',
                   items: [
-                    'Booth mode for self-serve tasting stations',
-                    'Buddy system with taste match percentage',
-                    'Admin analytics dashboard with export',
-                    'Dark mode with full theme support',
+                    'Account conversion now correctly migrates all ratings to your permanent account',
+                    'Curator wine approval and merge flows fixed',
+                    'Signup page redirects gracefully when no tasting session is active',
+                  ],
+                },
+                {
+                  version: 'v2.3',
+                  label: 'security',
+                  date: 'Mar–Apr 2026',
+                  items: [
+                    'Row Level Security rolled out to wine catalog, suggestions, and curator tools',
+                    'Wine catalog write-protected — admins and curators only',
+                    'Tasting note descriptors ownership enforced at the database level',
+                  ],
+                },
+                {
+                  version: 'v2.2',
+                  label: 'stability',
+                  date: 'Nov 2025–Feb 2026',
+                  items: [
+                    'Returning guests now keep their session and ratings across visits',
+                    'Booth mode identity fixed — same device always reuses the same session',
+                    'QR scanner now works on Firefox and Safari, not just Chrome',
+                    'Profiles secured with full Row Level Security',
                   ],
                 },
                 {
@@ -765,6 +785,8 @@ export default function HomePage() {
                 const labelColors: Record<string, string> = {
                   upcoming: 'bg-[var(--gold-muted)] text-[var(--gold)] border-[var(--gold)]/30',
                   latest: 'bg-[var(--wine-muted)] text-[var(--wine)] border-[var(--border-accent)]',
+                  security: 'bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+                  stability: 'bg-[var(--surface)] text-[var(--foreground-secondary)] border-[var(--border)]',
                   major: 'bg-[var(--surface)] text-[var(--foreground-secondary)] border-[var(--border)]',
                   origin: 'bg-[var(--surface)] text-[var(--foreground-muted)] border-[var(--border)]',
                 }
