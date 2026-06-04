@@ -167,6 +167,7 @@ export default function WineDetailPage() {
           .from('event_wines')
           .select('*')
           .eq('id', wineId)
+          .eq('event_id', eventData.id)
           .single()
 
         if (wineData) {

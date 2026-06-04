@@ -75,6 +75,9 @@ export default function AdminLayout({
           setIsLoading(false)
           return
         }
+
+        // Profile not found or not admin — clear stale entry
+        localStorage.removeItem('palate-admin-user')
       }
 
       // Check Supabase auth session

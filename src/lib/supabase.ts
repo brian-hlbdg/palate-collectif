@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder', {
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -55,6 +59,8 @@ export type Database = {
           admin_id: string
           is_active: boolean
           event_type: 'wine_crawl' | 'booth'
+          is_booth_mode: boolean
+          is_deleted: boolean
           created_at: string
           booth_logo_url: string | null
           booth_primary_color: string | null
@@ -70,6 +76,8 @@ export type Database = {
           admin_id: string
           is_active?: boolean
           event_type?: 'wine_crawl' | 'booth'
+          is_booth_mode?: boolean
+          is_deleted?: boolean
           created_at?: string
           booth_logo_url?: string | null
           booth_primary_color?: string | null
@@ -85,6 +93,8 @@ export type Database = {
           admin_id?: string
           is_active?: boolean
           event_type?: 'wine_crawl' | 'booth'
+          is_booth_mode?: boolean
+          is_deleted?: boolean
           created_at?: string
           booth_logo_url?: string | null
           booth_primary_color?: string | null
@@ -165,7 +175,7 @@ export type Database = {
           created_at?: string
         }
       }
-      user_ratings: {
+      user_wine_ratings: {
         Row: {
           id: string
           user_id: string
