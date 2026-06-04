@@ -12,6 +12,7 @@ const manrope = Manrope({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://palatecollectif.com'),
   title: {
     default: 'Palate — Wine Tasting Experience',
     template: '%s | Palate',
