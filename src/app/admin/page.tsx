@@ -55,13 +55,26 @@ export default function AdminDashboardPage() {
       if (!adminId) return
 
       try {
-        // Load events for this admin
-        const { data: events } = await supabase
+        // Check if current user is a curator (sees all events)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_curator')
+          .eq('id', adminId)
+          .single()
+        const isCurator = profile?.is_curator === true
+
+        // Load events — curators see everything, admins see their own
+        let eventsQuery = supabase
           .from('tasting_events')
           .select('id, event_code, event_name, event_date, is_active, is_booth_mode, is_deleted')
-          .eq('admin_id', adminId)
           .eq('is_deleted', false)
           .order('created_at', { ascending: false })
+
+        if (!isCurator) {
+          eventsQuery = eventsQuery.eq('admin_id', adminId)
+        }
+
+        const { data: events } = await eventsQuery
 
         if (events) {
           // Calculate stats
