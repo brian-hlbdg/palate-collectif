@@ -41,6 +41,12 @@ export default function UserLayout({
 
   useEffect(() => {
     const checkUser = async () => {
+      // Changelog is public — no auth required
+      if (pathname === '/changelog') {
+        setIsLoading(false)
+        return
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session?.user) {
@@ -77,7 +83,7 @@ export default function UserLayout({
     }
 
     checkUser()
-  }, [router])
+  }, [router, pathname])
 
   const loadChangelogBadge = async () => {
     const lastSeen = localStorage.getItem('palate-changelog-last-seen')
@@ -120,6 +126,9 @@ export default function UserLayout({
       </div>
     )
   }
+
+  // Changelog is public — render without nav wrapper
+  if (pathname === '/changelog') return <>{children}</>
 
   if (!user) return null
 
