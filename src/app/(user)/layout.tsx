@@ -94,7 +94,6 @@ export default function UserLayout({
 
   const handleLogout = async () => {
     localStorage.removeItem('palate-temp-user')
-    localStorage.removeItem('palate-current-event')
     localStorage.removeItem('palate-user')
     await supabase.auth.signOut()
     router.push('/login')

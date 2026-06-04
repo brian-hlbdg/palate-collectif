@@ -128,7 +128,6 @@ export default function JoinEventPage() {
 
       // Store temp user ID
       localStorage.setItem('palate-temp-user', tempId)
-      localStorage.setItem('palate-current-event', event!.id)
 
       addToast({
         type: 'success',

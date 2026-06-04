@@ -139,7 +139,6 @@ export default function SettingsPage() {
 
       // Clear local storage
       localStorage.removeItem('palate-temp-user')
-      localStorage.removeItem('palate-current-event')
 
       addToast({
         type: 'success',
@@ -162,7 +161,6 @@ export default function SettingsPage() {
   // Sign out
   const handleSignOut = async () => {
     localStorage.removeItem('palate-temp-user')
-    localStorage.removeItem('palate-current-event')
     await supabase.auth.signOut()
     router.push('/login')
   }
