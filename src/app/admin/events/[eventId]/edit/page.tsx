@@ -17,7 +17,13 @@ import {
   Sparkles,
   ToggleLeft,
   ToggleRight,
+  Building2,
 } from 'lucide-react'
+
+interface Organization {
+  id: string
+  name: string
+}
 
 export default function EditEventPage() {
   const params = useParams()
@@ -38,21 +44,31 @@ export default function EditEventPage() {
   const [isActive, setIsActive] = useState(true)
   const [isBoothMode, setIsBoothMode] = useState(false)
   const [boothWelcomeMessage, setBoothWelcomeMessage] = useState('')
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('')
+  const [organizations, setOrganizations] = useState<Organization[]>([])
 
   useEffect(() => {
-    const loadEvent = async () => {
-      const { data, error } = await supabase
-        .from('tasting_events')
-        .select('*')
-        .eq('id', eventId)
-        .single()
+    const loadData = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (error || !data) {
+      // Load orgs in parallel with event
+      const [eventResult, orgsResult] = await Promise.all([
+        supabase.from('tasting_events').select('*').eq('id', eventId).single(),
+        session
+          ? supabase
+              .from('organization_members')
+              .select('organizations(id, name)')
+              .eq('profile_id', session.user.id)
+          : Promise.resolve({ data: null }),
+      ])
+
+      if (eventResult.error || !eventResult.data) {
         addToast({ type: 'error', message: 'Event not found' })
         router.push('/admin/events')
         return
       }
 
+      const data = eventResult.data
       setEventName(data.event_name || '')
       setEventDate(data.event_date || '')
       setLocation(data.location || '')
@@ -61,10 +77,18 @@ export default function EditEventPage() {
       setIsActive(data.is_active ?? true)
       setIsBoothMode(data.is_booth_mode ?? false)
       setBoothWelcomeMessage(data.booth_welcome_message || '')
+      setSelectedOrgId(data.organization_id || '')
+
+      if (orgsResult.data) {
+        setOrganizations(
+          (orgsResult.data as any[]).flatMap(m => m.organizations ? [m.organizations] : [])
+        )
+      }
+
       setIsLoading(false)
     }
 
-    loadEvent()
+    loadData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
@@ -92,6 +116,7 @@ export default function EditEventPage() {
           max_participants: maxParticipants ? parseInt(maxParticipants) : null,
           is_active: isActive,
           booth_welcome_message: isBoothMode ? boothWelcomeMessage.trim() || null : null,
+          organization_id: selectedOrgId || null,
         })
         .eq('id', eventId)
 
@@ -202,6 +227,37 @@ export default function EditEventPage() {
             />
           </div>
         </Card>
+
+        {/* Group Assignment */}
+        {organizations.length > 0 && (
+          <Card variant="outlined" padding="md">
+            <label className="text-label-md text-[var(--foreground)] block mb-3">
+              <span className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Group (Optional)
+              </span>
+            </label>
+            <select
+              value={selectedOrgId}
+              onChange={(e) => setSelectedOrgId(e.target.value)}
+              className={cn(
+                'w-full px-4 py-3 rounded-xl',
+                'bg-[var(--surface)] border border-[var(--border)]',
+                'text-body-md text-[var(--foreground)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--wine-muted)] focus:border-[var(--wine)]',
+                'transition-colors duration-200'
+              )}
+            >
+              <option value="">Personal event (no group)</option>
+              {organizations.map(org => (
+                <option key={org.id} value={org.id}>{org.name}</option>
+              ))}
+            </select>
+            <p className="text-body-xs text-[var(--foreground-muted)] mt-2">
+              Group members will be able to see and manage this event
+            </p>
+          </Card>
+        )}
 
         {/* Booth Settings */}
         {isBoothMode && (

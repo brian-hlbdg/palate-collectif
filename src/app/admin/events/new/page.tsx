@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -18,7 +18,13 @@ import {
   Sparkles,
   Check,
   RefreshCw,
+  Building2,
 } from 'lucide-react'
+
+interface Organization {
+  id: string
+  name: string
+}
 
 type EventType = 'regular' | 'booth'
 
@@ -33,16 +39,33 @@ export default function NewEventPage() {
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [maxParticipants, setMaxParticipants] = useState('')
-  
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('')
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+
   // Booth-specific settings
   const [boothWelcomeMessage, setBoothWelcomeMessage] = useState('')
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const adminId = typeof window !== 'undefined'
     ? localStorage.getItem('palate-admin-user')
     : null
+
+  useEffect(() => {
+    const loadOrgs = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const { data } = await supabase
+        .from('organization_members')
+        .select('organizations(id, name)')
+        .eq('profile_id', session.user.id)
+      if (data) {
+        setOrganizations(data.flatMap((m: any) => m.organizations ? [m.organizations] : []))
+      }
+    }
+    loadOrgs()
+  }, [])
 
   const regenerateCode = () => {
     setEventCode(generateEventCode())
@@ -87,6 +110,7 @@ export default function NewEventPage() {
         is_booth_mode: eventType === 'booth',
         access_type: eventType === 'booth' ? 'email_only' : 'event_code',
         booth_welcome_message: eventType === 'booth' ? boothWelcomeMessage.trim() || null : null,
+        organization_id: selectedOrgId || null,
       }
 
       const { data, error } = await supabase
@@ -303,6 +327,37 @@ export default function NewEventPage() {
             />
           </div>
         </Card>
+
+        {/* Group Assignment */}
+        {organizations.length > 0 && (
+          <Card variant="outlined" padding="md">
+            <label className="text-label-md text-[var(--foreground)] block mb-3">
+              <span className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Group (Optional)
+              </span>
+            </label>
+            <select
+              value={selectedOrgId}
+              onChange={(e) => setSelectedOrgId(e.target.value)}
+              className={cn(
+                'w-full px-4 py-3 rounded-xl',
+                'bg-[var(--surface)] border border-[var(--border)]',
+                'text-body-md text-[var(--foreground)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--wine-muted)] focus:border-[var(--wine)]',
+                'transition-colors duration-200'
+              )}
+            >
+              <option value="">Personal event (no group)</option>
+              {organizations.map(org => (
+                <option key={org.id} value={org.id}>{org.name}</option>
+              ))}
+            </select>
+            <p className="text-body-xs text-[var(--foreground-muted)] mt-2">
+              Group members will be able to see and manage this event
+            </p>
+          </Card>
+        )}
 
         {/* Booth Settings */}
         {eventType === 'booth' && (

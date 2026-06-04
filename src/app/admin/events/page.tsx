@@ -15,6 +15,7 @@ import {
   Users,
   ChevronRight,
   BarChart3,
+  Building2,
 } from 'lucide-react'
 
 interface Event {
@@ -24,7 +25,10 @@ interface Event {
   event_date: string
   location?: string
   is_active: boolean
+  admin_id: string
+  organization_id?: string | null
   event_wines?: { id: string }[]
+  organizations?: { name: string } | null
 }
 
 export default function AdminEventsPage() {
@@ -46,11 +50,24 @@ export default function AdminEventsPage() {
         return
       }
 
-      const { data, error } = await supabase
+      const { data: memberships } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('profile_id', session.user.id)
+
+      const orgIds = memberships?.map(m => m.organization_id) || []
+
+      let query = supabase
         .from('tasting_events')
-        .select('*, event_wines(id)')
-        .eq('admin_id', session.user.id)
-        .order('event_date', { ascending: false })
+        .select('*, event_wines(id), organizations(name)')
+
+      if (orgIds.length > 0) {
+        query = query.or(`admin_id.eq.${session.user.id},organization_id.in.(${orgIds.join(',')})`)
+      } else {
+        query = query.eq('admin_id', session.user.id)
+      }
+
+      const { data, error } = await query.order('event_date', { ascending: false })
 
       if (error) throw error
       setEvents(data || [])
@@ -157,10 +174,16 @@ export default function AdminEventsPage() {
                     </span>
                   )}
                 </div>
-                <div className="mt-2">
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <span className="font-mono text-body-xs px-2 py-1 rounded bg-[var(--surface)] text-[var(--foreground-secondary)]">
                     Code: {event.event_code}
                   </span>
+                  {event.organizations?.name && (
+                    <span className="flex items-center gap-1 text-body-xs px-2 py-1 rounded bg-[var(--wine-muted)] text-[var(--wine)]">
+                      <Building2 className="h-3 w-3" />
+                      {event.organizations.name}
+                    </span>
+                  )}
                 </div>
               </div>
 

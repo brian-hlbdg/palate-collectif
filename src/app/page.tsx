@@ -730,9 +730,20 @@ export default function HomePage() {
                   ],
                 },
                 {
-                  version: 'v2.4',
+                  version: 'v2.5',
                   label: 'latest',
-                  date: 'May–Jun 2026',
+                  date: 'Jun 2026',
+                  items: [
+                    'Admin groups — curators can create organizations and invite other admins',
+                    'Shared events — assign an event to a group so all members see it',
+                    'Group picker on event creation and edit forms',
+                    'Events list shows a group badge for shared events',
+                  ],
+                },
+                {
+                  version: 'v2.4',
+                  label: 'stability',
+                  date: 'May 2026',
                   items: [
                     'Account conversion now correctly migrates all ratings to your permanent account',
                     'Curator wine approval and merge flows fixed',
