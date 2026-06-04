@@ -81,32 +81,49 @@ export default function JoinEventPage() {
     setIsLoading(true)
 
     try {
-      // Create an anonymous Supabase auth session so auth.uid() works for RLS
-      const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously()
-      if (anonError || !anonData.session) {
-        setError('Failed to create session. Please try again.')
-        return
+      // Reuse existing anonymous session if present, otherwise create a new one.
+      // This preserves ratings when a user re-enters an event code after closing the browser.
+      const { data: { session: existingSession } } = await supabase.auth.getSession()
+      let tempId: string
+
+      if (existingSession?.user) {
+        tempId = existingSession.user.id
+      } else {
+        const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously()
+        if (anonError || !anonData.session) {
+          setError('Failed to create session. Please try again.')
+          return
+        }
+        tempId = anonData.session.user.id
       }
-      const tempId = anonData.session.user.id
 
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 7)
 
-      const { error: profileError } = await supabase
+      // Insert profile only if it doesn't already exist
+      const { data: existingProfile } = await supabase
         .from('profiles')
-        .insert({
-          id: tempId,
-          display_name: displayName.trim() || 'Guest',
-          eventbrite_email: email.trim() || null,
-          is_temp_account: true,
-          account_expires_at: expiresAt.toISOString(),
-          is_admin: false,
-        })
+        .select('id')
+        .eq('id', tempId)
+        .single()
 
-      if (profileError) {
-        console.error('Profile insert error:', profileError)
-        setError(`Failed to join: ${profileError.message}`)
-        return
+      if (!existingProfile) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: tempId,
+            display_name: displayName.trim() || 'Guest',
+            eventbrite_email: email.trim() || null,
+            is_temp_account: true,
+            account_expires_at: expiresAt.toISOString(),
+            is_admin: false,
+          })
+
+        if (profileError) {
+          console.error('Profile insert error:', profileError)
+          setError(`Failed to join: ${profileError.message}`)
+          return
+        }
       }
 
       // Store temp user ID
