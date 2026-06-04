@@ -14,9 +14,13 @@ export default function SignupPage() {
 
   useEffect(() => {
     const tempId = localStorage.getItem('palate-temp-user')
+    if (!tempId) {
+      router.replace('/join')
+      return
+    }
     setTempUserId(tempId)
     setIsLoading(false)
-  }, [])
+  }, [router])
 
   if (isLoading) {
     return (
@@ -48,7 +52,7 @@ export default function SignupPage() {
           animate={{ opacity: 1, y: 0 }}
         >
           <AccountConversion
-            tempUserId={tempUserId ?? 'new'}
+            tempUserId={tempUserId!}
             onConversionComplete={() => {
               router.push('/dashboard')
             }}
