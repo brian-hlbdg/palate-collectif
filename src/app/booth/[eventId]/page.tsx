@@ -99,45 +99,61 @@ export default function BoothEntryPage() {
     }
 
     try {
-      // Check if user already exists with this email
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('eventbrite_email', trimmedEmail)
-        .maybeSingle()
-
       let userId: string
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 30)
 
-      if (existingUser) {
-        // Returning user — keep their existing profile ID
-        userId = existingUser.id
-        // Sign in anonymously so they have a valid session for this visit
-        await supabase.auth.signInAnonymously()
-      } else {
-        // New user — create anonymous auth session so auth.uid() works for RLS
-        const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously()
-        if (anonError || !anonData.session) throw new Error('Failed to create session')
+      // Reuse existing session if present (same device returning user).
+      // auth.uid() must match profile id for RLS, so we never reuse an old
+      // email-matched UUID from a different session.
+      const { data: { session: existingSession } } = await supabase.auth.getSession()
 
-        const expiresAt = new Date()
-        expiresAt.setDate(expiresAt.getDate() + 30) // 30 days for booth users
+      if (existingSession?.user) {
+        userId = existingSession.user.id
 
-        const { error: createError } = await supabase
+        // Ensure a profile exists for this session (may have expired)
+        const { data: existingProfile } = await supabase
           .from('profiles')
-          .insert({
-            id: anonData.session.user.id,
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle()
+
+        if (!existingProfile) {
+          await supabase.from('profiles').insert({
+            id: userId,
             display_name: trimmedEmail.split('@')[0],
             eventbrite_email: trimmedEmail,
             is_temp_account: true,
             account_expires_at: expiresAt.toISOString(),
             is_admin: false,
           })
+        }
+      } else {
+        // No valid session — create a new anonymous one
+        const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously()
+        if (anonError || !anonData.session) throw new Error('Failed to create session')
+        userId = anonData.session.user.id
+
+        // Use previous display name if this email has visited before
+        const { data: prevProfile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('eventbrite_email', trimmedEmail)
+          .maybeSingle()
+
+        const { error: createError } = await supabase.from('profiles').insert({
+          id: userId,
+          display_name: prevProfile?.display_name || trimmedEmail.split('@')[0],
+          eventbrite_email: trimmedEmail,
+          is_temp_account: true,
+          account_expires_at: expiresAt.toISOString(),
+          is_admin: false,
+        })
 
         if (createError) {
           console.error('Profile creation error:', createError)
           throw createError
         }
-
-        userId = anonData.session.user.id
       }
 
       // Store user info in localStorage
