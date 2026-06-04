@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import jsQR from 'jsqr'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Button, Card } from '@/components/ui'
@@ -128,7 +129,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     // Get image data for scanning
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
 
-    // Use BarcodeDetector API if available (Chrome, Edge)
+    // Try BarcodeDetector first (Chrome, Edge)
     if ('BarcodeDetector' in window) {
       try {
         // @ts-ignore - BarcodeDetector is not in TypeScript types yet
@@ -142,8 +143,18 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             return
           }
         }
-      } catch (err) {
-        // BarcodeDetector failed, continue scanning
+      } catch {
+        // Fall through to jsQR
+      }
+    } else {
+      // jsQR fallback for Firefox, Safari, and other browsers
+      const result = jsQR(imageData.data, imageData.width, imageData.height)
+      if (result) {
+        const code = extractEventCode(result.data)
+        if (code) {
+          handleSuccessfulScan(code)
+          return
+        }
       }
     }
 
