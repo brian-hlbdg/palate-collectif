@@ -9,7 +9,6 @@ import { Button, Input, Card } from '@/components/ui'
 import { ThemeToggle } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
-import { generateUUID } from '@/lib/utils'
 import QRScanner from '@/components/QRScanner'
 import {
   Wine,
@@ -82,8 +81,14 @@ export default function JoinEventPage() {
     setIsLoading(true)
 
     try {
-      // Generate proper UUID for the profile
-      const tempId = generateUUID()
+      // Create an anonymous Supabase auth session so auth.uid() works for RLS
+      const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously()
+      if (anonError || !anonData.session) {
+        setError('Failed to create session. Please try again.')
+        return
+      }
+      const tempId = anonData.session.user.id
+
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 7)
 

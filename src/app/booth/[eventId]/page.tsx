@@ -8,7 +8,6 @@ import { Button, Input, Card } from '@/components/ui'
 import { WineLoader } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
-import { generateUUID } from '@/lib/utils'
 import { Wine, Mail, ArrowRight, Sparkles } from 'lucide-react'
 import Image from 'next/image'
 
@@ -110,20 +109,23 @@ export default function BoothEntryPage() {
       let userId: string
 
       if (existingUser) {
-        // User exists, use their ID
+        // Returning user — keep their existing profile ID
         userId = existingUser.id
+        // Sign in anonymously so they have a valid session for this visit
+        await supabase.auth.signInAnonymously()
       } else {
-        // Generate a proper UUID
-        const newUUID = generateUUID()
-        
+        // New user — create anonymous auth session so auth.uid() works for RLS
+        const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously()
+        if (anonError || !anonData.session) throw new Error('Failed to create session')
+
         const expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + 30) // 30 days for booth users
 
         const { error: createError } = await supabase
           .from('profiles')
           .insert({
-            id: newUUID,
-            display_name: trimmedEmail.split('@')[0], // Use email prefix as name
+            id: anonData.session.user.id,
+            display_name: trimmedEmail.split('@')[0],
             eventbrite_email: trimmedEmail,
             is_temp_account: true,
             account_expires_at: expiresAt.toISOString(),
@@ -135,7 +137,7 @@ export default function BoothEntryPage() {
           throw createError
         }
 
-        userId = newUUID
+        userId = anonData.session.user.id
       }
 
       // Store user info in localStorage
