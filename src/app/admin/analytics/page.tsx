@@ -70,25 +70,33 @@ export default function AnalyticsPage() {
     ? localStorage.getItem('palate-admin-user')
     : null
 
+  const [isCurator, setIsCurator] = useState(false)
+
+  useEffect(() => {
+    if (!adminId) return
+    supabase.from('profiles').select('is_curator').eq('id', adminId).single()
+      .then(({ data }) => setIsCurator(data?.is_curator === true))
+  }, [adminId])
+
   // Load events list
   useEffect(() => {
     const loadEvents = async () => {
       if (!adminId) return
 
-      const { data } = await supabase
+      let query = supabase
         .from('tasting_events')
         .select('id, event_name, event_code, event_date')
-        .eq('admin_id', adminId)
         .eq('is_deleted', false)
         .order('event_date', { ascending: false })
 
-      if (data) {
-        setEvents(data)
-      }
+      if (!isCurator) query = query.eq('admin_id', adminId)
+
+      const { data } = await query
+      if (data) setEvents(data)
     }
 
     loadEvents()
-  }, [adminId])
+  }, [adminId, isCurator])
 
   // Load analytics data
   useEffect(() => {
@@ -99,14 +107,11 @@ export default function AnalyticsPage() {
       try {
         // Get event IDs to filter
         let eventIds: string[] = []
-        
-        if (selectedEventId === 'all') {
-          const { data: eventsData } = await supabase
-            .from('tasting_events')
-            .select('id')
-            .eq('admin_id', adminId)
-            .eq('is_deleted', false)
 
+        if (selectedEventId === 'all') {
+          let q = supabase.from('tasting_events').select('id').eq('is_deleted', false)
+          if (!isCurator) q = q.eq('admin_id', adminId)
+          const { data: eventsData } = await q
           eventIds = eventsData?.map(e => e.id) || []
         } else {
           eventIds = [selectedEventId]
@@ -260,7 +265,7 @@ export default function AnalyticsPage() {
     }
 
     loadAnalytics()
-  }, [adminId, selectedEventId])
+  }, [adminId, selectedEventId, isCurator])
 
   // Export to CSV
   const handleExport = async () => {
