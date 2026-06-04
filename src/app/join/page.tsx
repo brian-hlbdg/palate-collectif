@@ -105,7 +105,7 @@ export default function JoinEventPage() {
         .from('profiles')
         .select('id')
         .eq('id', tempId)
-        .single()
+        .maybeSingle()
 
       if (!existingProfile) {
         const { error: profileError } = await supabase

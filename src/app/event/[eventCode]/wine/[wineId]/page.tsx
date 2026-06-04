@@ -201,7 +201,7 @@ export default function WineDetailPage() {
           .select('rating, personal_notes, would_buy, is_skipped, skip_reason')
           .eq('user_id', resolvedUserId)
           .eq('event_wine_id', wineId)
-          .single()
+          .maybeSingle()
 
         if (existingRating) {
           setHasExistingRating(true)

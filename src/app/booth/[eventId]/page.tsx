@@ -104,7 +104,7 @@ export default function BoothEntryPage() {
         .from('profiles')
         .select('id')
         .eq('eventbrite_email', trimmedEmail)
-        .single()
+        .maybeSingle()
 
       let userId: string
 
