@@ -46,7 +46,7 @@ export default function CuratorLoginPage() {
       // Check if user is a curator
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, display_name, is_curator')
+        .select('id, display_name, is_curator, is_admin')
         .eq('id', authData.user.id)
         .single()
 
@@ -64,8 +64,11 @@ export default function CuratorLoginPage() {
         return
       }
 
-      // Success - store curator user ID
+      // Success - store curator user ID (and admin if applicable)
       localStorage.setItem('palate-curator-user', profile.id)
+      if (profile.is_admin) {
+        localStorage.setItem('palate-admin-user', profile.id)
+      }
 
       addToast({
         type: 'success',

@@ -94,6 +94,7 @@ export default function CuratorLayout({
 
   const handleLogout = () => {
     localStorage.removeItem('palate-curator-user')
+    localStorage.removeItem('palate-admin-user')
     supabase.auth.signOut()
     router.push('/login')
   }
