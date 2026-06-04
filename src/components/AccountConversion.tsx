@@ -114,43 +114,26 @@ export function AccountConversion({
 
       const newUserId = authData.user.id
 
-      // 2. Update the temp profile to permanent
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          id: newUserId,
-          email: email,
-          display_name: displayName || email.split('@')[0],
-          is_temp_account: false,
-          account_expires_at: null,
-          converted_at: new Date().toISOString(),
-          converted_from: tempUserId
-        })
-        .eq('id', tempUserId)
+      // 2. Create permanent profile for the new auth user
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: newUserId,
+        display_name: displayName || email.split('@')[0],
+        eventbrite_email: email,
+        is_temp_account: false,
+        converted_at: new Date().toISOString(),
+        converted_from_temp: tempUserId,
+        is_admin: false,
+      })
 
-      // If update fails, we'll create a new profile and migrate data
-      if (profileError) {
-        // Create new profile
-        await supabase.from('profiles').insert({
-          id: newUserId,
-          email: email,
-          display_name: displayName || email.split('@')[0],
-          is_temp_account: false,
-          converted_from: tempUserId
-        })
+      if (profileError) throw profileError
 
-        // Migrate ratings to new user
-        await supabase
-          .from('user_wine_ratings')
-          .update({ user_id: newUserId })
-          .eq('user_id', tempUserId)
+      // 3. Migrate ratings (and their descriptors) from temp → permanent user.
+      // Runs server-side via SECURITY DEFINER to bypass RLS on the old temp rows.
+      const { error: migrateError } = await supabase.rpc('convert_temp_account', {
+        temp_id: tempUserId,
+      })
 
-        // Migrate descriptors
-        await supabase
-          .from('user_wine_descriptors')
-          .update({ user_id: newUserId })
-          .eq('user_id', tempUserId)
-      }
+      if (migrateError) throw migrateError
 
       // 3. Update local storage
       localStorage.setItem('palate-user', newUserId)
