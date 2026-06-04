@@ -50,21 +50,24 @@ export default function AdminEventsPage() {
         return
       }
 
-      const { data: memberships } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('profile_id', session.user.id)
+      const [profileResult, membershipsResult] = await Promise.all([
+        supabase.from('profiles').select('is_curator').eq('id', session.user.id).single(),
+        supabase.from('organization_members').select('organization_id').eq('profile_id', session.user.id),
+      ])
 
-      const orgIds = memberships?.map(m => m.organization_id) || []
+      const isCurator = profileResult.data?.is_curator === true
+      const orgIds = membershipsResult.data?.map(m => m.organization_id) || []
 
       let query = supabase
         .from('tasting_events')
         .select('*, event_wines(id), organizations(name)')
 
-      if (orgIds.length > 0) {
-        query = query.or(`admin_id.eq.${session.user.id},organization_id.in.(${orgIds.join(',')})`)
-      } else {
-        query = query.eq('admin_id', session.user.id)
+      if (!isCurator) {
+        if (orgIds.length > 0) {
+          query = query.or(`admin_id.eq.${session.user.id},organization_id.in.(${orgIds.join(',')})`)
+        } else {
+          query = query.eq('admin_id', session.user.id)
+        }
       }
 
       const { data, error } = await query.order('event_date', { ascending: false })
