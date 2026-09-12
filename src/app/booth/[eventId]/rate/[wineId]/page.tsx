@@ -16,6 +16,7 @@ import {
   MapPin,
   Grape,
   ShoppingBag,
+  Heart,
   Info,
   ChevronDown,
   ChevronUp,
@@ -105,6 +106,7 @@ export default function BoothRatePage() {
   const [rating, setRating] = useState(0)
   const [notes, setNotes] = useState('')
   const [wouldBuy, setWouldBuy] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
   const [hasExistingRating, setHasExistingRating] = useState(false)
   const [isSkipped, setIsSkipped] = useState(false)
   const [skipReason, setSkipReason] = useState<string | null>(null)
@@ -153,7 +155,7 @@ export default function BoothRatePage() {
 
         const { data: existingRating } = await supabase
           .from('user_wine_ratings')
-          .select('rating, personal_notes, would_buy, is_skipped, skip_reason')
+          .select('rating, personal_notes, would_buy, is_favorite, is_skipped, skip_reason')
           .eq('user_id', userId)
           .eq('event_wine_id', wineId)
           .single()
@@ -167,6 +169,7 @@ export default function BoothRatePage() {
             setRating(existingRating.rating)
             setNotes(existingRating.personal_notes || '')
             setWouldBuy(existingRating.would_buy || false)
+            setIsFavorite(existingRating.is_favorite || false)
           }
         }
       } catch (err) {
@@ -187,7 +190,7 @@ export default function BoothRatePage() {
     if (!userId || rating === 0) return
     setIsSaving(true)
     try {
-      const ratingData = { user_id: userId, event_wine_id: wineId, rating, personal_notes: notes.trim() || null, would_buy: wouldBuy }
+      const ratingData = { user_id: userId, event_wine_id: wineId, rating, personal_notes: notes.trim() || null, would_buy: wouldBuy, is_favorite: isFavorite }
       if (hasExistingRating) {
         const { error } = await supabase.from('user_wine_ratings').update(ratingData).eq('user_id', userId).eq('event_wine_id', wineId)
         if (error) throw error
@@ -296,13 +299,22 @@ export default function BoothRatePage() {
           <span className="text-body-sm text-[var(--foreground-muted)]">
             {currentIndex + 1} of {allWineIds.length}
           </span>
-          <button
-            onClick={() => setWouldBuy(!wouldBuy)}
-            className={cn('p-2 rounded-xl transition-all duration-200', wouldBuy ? 'text-[var(--gold)] bg-[var(--gold-muted)]' : 'text-[var(--foreground-muted)] hover:text-[var(--gold)]')}
-            title="Would buy this wine"
-          >
-            <ShoppingBag className={cn('h-5 w-5', wouldBuy && 'fill-current')} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsFavorite(!isFavorite)}
+              className={cn('p-2 rounded-xl transition-all duration-200', isFavorite ? 'text-red-400 bg-red-900/20' : 'text-[var(--foreground-muted)] hover:text-red-400')}
+              title="Save to favorites"
+            >
+              <Heart className={cn('h-5 w-5', isFavorite && 'fill-current')} />
+            </button>
+            <button
+              onClick={() => setWouldBuy(!wouldBuy)}
+              className={cn('p-2 rounded-xl transition-all duration-200', wouldBuy ? 'text-[var(--gold)] bg-[var(--gold-muted)]' : 'text-[var(--foreground-muted)] hover:text-[var(--gold)]')}
+              title="Would buy this wine"
+            >
+              <ShoppingBag className={cn('h-5 w-5', wouldBuy && 'fill-current')} />
+            </button>
+          </div>
         </div>
       </header>
 

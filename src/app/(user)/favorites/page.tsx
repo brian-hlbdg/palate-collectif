@@ -11,15 +11,14 @@ import {
   Wine,
   ShoppingBag,
   Star,
-  Filter,
   Heart,
-  Calendar,
 } from 'lucide-react'
 
 interface FavoriteWine {
   id: string
   rating: number
   would_buy: boolean
+  is_favorite: boolean
   personal_notes?: string
   created_at: string
   wine: {
@@ -62,8 +61,9 @@ export default function FavoritesPage() {
       try {
         const { data: ratings } = await supabase
           .from('user_wine_ratings')
-          .select('id, rating, would_buy, personal_notes, created_at, event_wine_id')
+          .select('id, rating, would_buy, is_favorite, personal_notes, created_at, event_wine_id')
           .eq('user_id', userId)
+          .eq('is_favorite', true)
 
         if (!ratings || ratings.length === 0) {
           setIsLoading(false)
@@ -94,6 +94,7 @@ export default function FavoritesPage() {
             would_buy: r.would_buy || false,
             personal_notes: r.personal_notes,
             created_at: r.created_at,
+            is_favorite: r.is_favorite || true,
             wine: {
               id: wine?.id || '',
               wine_name: wine?.wine_name || 'Unknown Wine',
@@ -151,21 +152,21 @@ export default function FavoritesPage() {
       {/* Header */}
       <div>
         <h1 className="text-display-md font-bold text-[var(--foreground)]">
-          Would Buy
+          Favorites
         </h1>
         <p className="text-body-md text-[var(--foreground-secondary)] mt-1">
-          Wines you loved and want to purchase
+          Wines you&apos;ve saved with the heart
         </p>
       </div>
 
       {wines.length === 0 ? (
         <Card variant="outlined" padding="lg" className="text-center">
-          <ShoppingBag className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
+          <Heart className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
           <h2 className="text-body-lg font-semibold text-[var(--foreground)] mb-2">
-            No wines yet
+            No favorites yet
           </h2>
           <p className="text-body-md text-[var(--foreground-secondary)] mb-6">
-            Mark wines as "Would Buy" when rating to see them here
+            Tap the heart when rating a wine to save it here
           </p>
           <Link href="/join">
             <Button>Join an Event</Button>
@@ -177,14 +178,14 @@ export default function FavoritesPage() {
           <div className="flex gap-4">
             <Card variant="default" padding="sm" className="flex-1">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[var(--wine-muted)] flex items-center justify-center">
-                  <Wine className="h-5 w-5 text-[var(--wine)]" />
+                <div className="w-10 h-10 rounded-xl bg-red-900/20 flex items-center justify-center">
+                  <Heart className="h-5 w-5 text-red-400" />
                 </div>
                 <div>
                   <p className="text-display-sm font-bold text-[var(--foreground)]">
                     {wines.length}
                   </p>
-                  <p className="text-body-xs text-[var(--foreground-muted)]">Total</p>
+                  <p className="text-body-xs text-[var(--foreground-muted)]">Saved</p>
                 </div>
               </div>
             </Card>

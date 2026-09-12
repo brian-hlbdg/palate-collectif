@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { BuddyConnect } from '@/components/BuddyConnect'
 import { PalatePersonalModal } from '@/components/PalatePersonalModal'
+import { SubmitWineFlow } from '@/components/SubmitWineFlow'
 import { isEventClosed, getEventBuddies } from '@/lib/buddies'
 import Image from 'next/image'
 
@@ -91,6 +92,10 @@ export default function BoothWinesPage() {
 
   // Personal modal
   const [showPersonalModal, setShowPersonalModal] = useState(false)
+
+  // Submit wine flow
+  const [showSubmitFlow, setShowSubmitFlow] = useState(false)
+  const [submitFlowWineName, setSubmitFlowWineName] = useState('')
 
   // Check user
   const checkUser = async () => {
@@ -499,6 +504,24 @@ export default function BoothWinesPage() {
             )}
           </div>
         )}
+
+        {/* Can't find your wine */}
+        {wines.length > 0 && (
+          <div className="mt-6 text-center">
+            <p className="text-body-sm text-[var(--foreground-muted)] mb-2">
+              Don&apos;t see your wine?
+            </p>
+            <button
+              onClick={() => {
+                setSubmitFlowWineName(searchQuery)
+                setShowSubmitFlow(true)
+              }}
+              className="text-body-sm font-medium text-[var(--wine)] hover:underline"
+            >
+              Submit a wine →
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Bottom Navigation */}
@@ -619,6 +642,17 @@ export default function BoothWinesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Submit wine flow */}
+      <SubmitWineFlow
+        isOpen={showSubmitFlow}
+        onClose={() => setShowSubmitFlow(false)}
+        initialWineName={submitFlowWineName}
+        userId={userId}
+        onSubmitted={() => {
+          addToast({ type: 'success', message: 'Wine submitted for review!' })
+        }}
+      />
 
       {/* Personal account modal */}
       <PalatePersonalModal
