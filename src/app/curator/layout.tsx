@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Building,
   ClipboardList,
+  Calendar,
 } from 'lucide-react'
 
 interface CuratorUser {
@@ -100,17 +101,22 @@ export default function CuratorLayout({
   }
 
   const navItems = [
-    { 
-      href: '/curator', 
-      icon: Database, 
+    {
+      href: '/curator',
+      icon: Database,
       label: 'Dashboard',
       exact: true,
     },
-    { 
-      href: '/curator/wines', 
-      icon: Wine, 
+    {
+      href: '/curator/wines',
+      icon: Wine,
       label: 'Wine Review',
       badge: pendingCount > 0 ? pendingCount : undefined,
+    },
+    {
+      href: '/admin/events',
+      icon: Calendar,
+      label: 'Events',
     },
     { 
       href: '/curator/analytics', 

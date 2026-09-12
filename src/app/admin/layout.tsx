@@ -80,9 +80,25 @@ export default function AdminLayout({
         localStorage.removeItem('palate-admin-user')
       }
 
+      // Also accept curator sessions (curator > admin in role hierarchy)
+      const curatorId = localStorage.getItem('palate-curator-user')
+      if (curatorId) {
+        const { data: curatorProfile } = await supabase
+          .from('profiles')
+          .select('id, display_name, is_curator')
+          .eq('id', curatorId)
+          .single()
+
+        if (curatorProfile?.is_curator) {
+          setUser({ id: curatorProfile.id, display_name: curatorProfile.display_name, is_admin: true })
+          setIsLoading(false)
+          return
+        }
+      }
+
       // Check Supabase auth session
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
@@ -98,7 +114,7 @@ export default function AdminLayout({
         }
       }
 
-      // Not an admin, redirect to login
+      // Not an admin or curator, redirect to login
       router.push('/admin/login')
     }
 
