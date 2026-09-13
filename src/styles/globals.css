@@ -488,11 +488,52 @@
 
 @media print {
   body {
-    background: white;
-    color: black;
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
   }
 
+  /* Hide nav chrome */
+  aside,
+  header,
+  nav,
+  footer,
   .no-print {
     display: none !important;
+  }
+
+  /* Remove sidebar offset */
+  main {
+    padding-left: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Cards as plain bordered boxes */
+  [class*="shadow"] {
+    box-shadow: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Page break helpers */
+  .print-break-before {
+    page-break-before: always;
+  }
+
+  .print-break-avoid {
+    page-break-inside: avoid;
+  }
+
+  /* Preserve bar chart colors */
+  .print-bar {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  @page {
+    margin: 1.5cm 2cm;
   }
 }

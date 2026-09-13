@@ -14,6 +14,7 @@ import {
   Users,
   TrendingUp,
   Download,
+  Printer,
   Calendar,
   ShoppingBag,
   Award,
@@ -348,8 +349,19 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Print-only report header */}
+      <div className="print-only hidden mb-6 pb-4 border-b border-gray-300">
+        <h1 className="text-2xl font-bold text-black">Palate — Analytics Report</h1>
+        <p className="text-sm text-gray-600 mt-1">
+          {selectedEventId === 'all'
+            ? 'All Events'
+            : events.find(e => e.id === selectedEventId)?.event_name || ''}
+          {' · '}Printed {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+        </p>
+      </div>
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
         <div>
           <h1 className="text-display-md font-bold text-[var(--foreground)]">
             Analytics
@@ -386,6 +398,14 @@ export default function AnalyticsPage() {
             disabled={!analytics || analytics.totalRatings === 0}
           >
             Export CSV
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => window.print()}
+            leftIcon={<Printer className="h-5 w-5" />}
+            disabled={!analytics || analytics.totalRatings === 0}
+          >
+            Print
           </Button>
         </div>
       </div>
@@ -562,7 +582,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Recent Activity */}
-            <Card variant="outlined" padding="lg">
+            <Card variant="outlined" padding="lg" className="no-print">
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="h-5 w-5 text-[var(--wine)]" />
                 <h2 className="text-body-lg font-semibold text-[var(--foreground)]">
