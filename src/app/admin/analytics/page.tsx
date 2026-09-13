@@ -277,72 +277,165 @@ export default function AnalyticsPage() {
     loadAnalytics()
   }, [adminId, selectedEventId, isCurator])
 
-  // Export to CSV
+  // Export report CSV
   const handleExport = async () => {
     if (!analytics) return
     setIsExporting(true)
 
     try {
-      // Get event IDs
-      let eventIds: string[] = []
-      if (selectedEventId === 'all') {
-        eventIds = events.map(e => e.id)
-      } else {
-        eventIds = [selectedEventId]
-      }
+      const eventIds = selectedEventId === 'all'
+        ? events.map(e => e.id)
+        : [selectedEventId]
 
-      // Get all wines
+      const selectedEvent = selectedEventId !== 'all'
+        ? events.find(e => e.id === selectedEventId)
+        : null
+
+      // Wines ordered by tasting order
       const { data: wines } = await supabase
         .from('event_wines')
-        .select('id, wine_name, producer, vintage, wine_type, region, event_id')
+        .select('id, wine_name, producer, vintage, wine_type, region, tasting_order')
         .in('event_id', eventIds)
+        .order('tasting_order', { ascending: true })
 
-      const wineIds = wines?.map(w => w.id) || []
+      if (!wines || wines.length === 0) {
+        addToast({ type: 'error', message: 'No wines found' })
+        return
+      }
 
-      // Get all ratings
+      const wineIds = wines.map(w => w.id)
+
+      // All ratings
       const { data: ratings } = await supabase
         .from('user_wine_ratings')
-        .select('event_wine_id, user_id, rating, personal_notes, would_buy, is_skipped, skip_reason, created_at')
+        .select('event_wine_id, user_id, rating, would_buy, is_skipped, skip_reason, personal_notes')
         .in('event_wine_id', wineIds)
 
-      // Build CSV
-      const headers = ['Wine Name', 'Producer', 'Vintage', 'Type', 'Region', 'Rating', 'Would Buy', 'Skipped', 'Skip Reason', 'Notes', 'Date']
-      const rows = ratings?.map(r => {
-        const wine = wines?.find(w => w.id === r.event_wine_id)
-        return [
-          wine?.wine_name || '',
-          wine?.producer || '',
-          wine?.vintage || '',
-          wine?.wine_type || '',
-          wine?.region || '',
-          r.is_skipped ? '' : r.rating.toString(),
-          r.is_skipped ? '' : (r.would_buy ? 'Yes' : 'No'),
-          r.is_skipped ? 'Yes' : 'No',
-          r.skip_reason?.replace(/"/g, '""') || '',
-          r.personal_notes?.replace(/"/g, '""') || '',
-          new Date(r.created_at).toLocaleDateString(),
-        ]
-      }) || []
+      // Profile info for all raters
+      const uniqueUserIds = [...new Set((ratings || []).map(r => r.user_id))]
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name, first_name, last_name, eventbrite_email, ticket_type, is_temp_account')
+        .in('id', uniqueUserIds)
 
-      const csv = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-      ].join('\n')
+      const profileMap: Record<string, { display_name?: string; first_name?: string; last_name?: string; eventbrite_email?: string; ticket_type?: string; is_temp_account?: boolean }> = {}
+      profiles?.forEach(p => { profileMap[p.id] = p })
+
+      type RatingRow = { event_wine_id: string; user_id: string; rating: number; would_buy: boolean; is_skipped: boolean; skip_reason: string | null; personal_notes: string | null }
+
+      // Index ratings: by wine and by user
+      const ratingsByUser: Record<string, Record<string, RatingRow>> = {}
+      ;(ratings || []).forEach(r => {
+        if (!ratingsByUser[r.user_id]) ratingsByUser[r.user_id] = {}
+        ratingsByUser[r.user_id][r.event_wine_id] = r as RatingRow
+      })
+
+      // Wine stats for scorecard
+      const wineStats: Record<string, { scores: number[]; wouldBuy: number }> = {}
+      ;(ratings || []).filter(r => !r.is_skipped).forEach(r => {
+        if (!wineStats[r.event_wine_id]) wineStats[r.event_wine_id] = { scores: [], wouldBuy: 0 }
+        wineStats[r.event_wine_id].scores.push(r.rating)
+        if (r.would_buy) wineStats[r.event_wine_id].wouldBuy++
+      })
+
+      const scorecardWines = wines
+        .map(w => {
+          const s = wineStats[w.id]
+          const avg = s ? s.scores.reduce((a, b) => a + b, 0) / s.scores.length : null
+          return { ...w, avg, tasted: s?.scores.length ?? 0, wouldBuy: s?.wouldBuy ?? 0 }
+        })
+        .sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1))
+
+      // CSV helpers
+      const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+      const row = (cells: unknown[]) => cells.map(q).join(',')
+      const lines: string[] = []
+
+      // — Report header —
+      const title = selectedEvent ? `Palate Report — ${selectedEvent.event_name}` : 'Palate Report — All Events'
+      const dateStr = selectedEvent ? new Date(selectedEvent.event_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
+      lines.push(q(title))
+      if (dateStr) lines.push(q(`Event date: ${dateStr}`))
+      lines.push(q(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`))
+      lines.push(q(`${analytics.totalParticipants} guests · ${wines.length} wines · Overall avg score: ${analytics.averageRating.toFixed(1)} / 5 · ${analytics.wouldBuyPercentage}% would buy`))
+      lines.push('')
+
+      // — Section 1: Wine Scorecard —
+      lines.push(q('SECTION 1 — WINE SCORECARD (ranked by score)'))
+      lines.push(row(['Rank', 'Wine', 'Producer', 'Vintage', 'Type', 'Region', 'Avg Score', 'Guests Tasted', 'Would Buy', 'Would Buy %']))
+      scorecardWines.forEach((w, i) => {
+        lines.push(row([
+          w.tasted > 0 ? i + 1 : '—',
+          w.wine_name,
+          w.producer || '',
+          w.vintage || '',
+          w.wine_type || '',
+          w.region || '',
+          w.avg !== null ? w.avg.toFixed(1) : 'Not tasted',
+          w.tasted || 0,
+          w.wouldBuy || 0,
+          w.tasted > 0 ? `${Math.round((w.wouldBuy / w.tasted) * 100)}%` : '—',
+        ]))
+      })
+      lines.push('')
+
+      // — Section 2: Guest Ratings Grid —
+      lines.push(q('SECTION 2 — GUEST RATINGS (one row per attendee)'))
+      lines.push(q('Rating scale: 1–5  ·  ✓ = would buy  ·  skip = did not taste  ·  blank = not reached'))
+      const wineColHeaders = wines.map(w => `${w.wine_name}${w.producer ? ` (${w.producer})` : ''}`)
+      lines.push(row(['Name', 'Email', 'Ticket Type', ...wineColHeaders, 'Wines Rated', 'Wines Skipped', 'Would Buy Count']))
+
+      // Sort guests: named accounts first, then temp
+      const sortedUserIds = [...uniqueUserIds].sort((a, b) => {
+        const pa = profileMap[a], pb = profileMap[b]
+        if (pa?.is_temp_account && !pb?.is_temp_account) return 1
+        if (!pa?.is_temp_account && pb?.is_temp_account) return -1
+        const nameA = (pa?.first_name || pa?.display_name || '').toLowerCase()
+        const nameB = (pb?.first_name || pb?.display_name || '').toLowerCase()
+        return nameA.localeCompare(nameB)
+      })
+
+      sortedUserIds.forEach(userId => {
+        const p = profileMap[userId]
+        const userRatings = ratingsByUser[userId] || {}
+
+        const name = [p?.first_name, p?.last_name].filter(Boolean).join(' ')
+          || p?.display_name
+          || 'Guest'
+        const email = p?.eventbrite_email || ''
+        const ticket = p?.ticket_type || (p?.is_temp_account ? 'Temp / Booth' : '')
+
+        const ratingCells = wines.map(w => {
+          const r = userRatings[w.id]
+          if (!r) return ''
+          if (r.is_skipped) return 'skip'
+          return r.would_buy ? `${r.rating} ✓` : String(r.rating)
+        })
+
+        const rated = Object.values(userRatings).filter(r => !r.is_skipped).length
+        const skipped = Object.values(userRatings).filter(r => r.is_skipped).length
+        const wouldBuyCount = Object.values(userRatings).filter(r => r.would_buy).length
+
+        lines.push(row([name, email, ticket, ...ratingCells, rated, skipped, wouldBuyCount]))
+      })
 
       // Download
-      const blob = new Blob([csv], { type: 'text/csv' })
+      const csv = '﻿' + lines.join('\n') // BOM for Excel UTF-8
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `wine-ratings-${new Date().toISOString().split('T')[0]}.csv`
+      const slug = (selectedEvent?.event_name || 'all-events').replace(/[^a-z0-9]/gi, '-').toLowerCase()
+      a.download = `palate-${slug}-${new Date().toISOString().split('T')[0]}.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      addToast({ type: 'success', message: 'Export downloaded!' })
+      addToast({ type: 'success', message: 'Report downloaded!' })
     } catch (err) {
-      addToast({ type: 'error', message: 'Failed to export data' })
+      console.error('Export error:', err)
+      addToast({ type: 'error', message: 'Failed to export report' })
     } finally {
       setIsExporting(false)
     }
