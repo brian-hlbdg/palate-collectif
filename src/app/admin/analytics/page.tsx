@@ -8,18 +8,14 @@ import { WineLoader } from '@/components/ui'
 import { useToast } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import {
-  BarChart3,
   Wine,
   Star,
   Users,
-  TrendingUp,
   Download,
   Printer,
   Calendar,
   ShoppingBag,
   Award,
-  Filter,
-  SkipForward,
 } from 'lucide-react'
 
 interface EventOption {
@@ -191,7 +187,7 @@ export default function AnalyticsPage() {
           }
         })
 
-        // Top wines by average rating (active only)
+        // All wines ranked by average rating
         const wineRatings: Record<string, { ratings: number[]; wouldBuy: number }> = {}
         activeRatings.forEach(r => {
           if (!wineRatings[r.event_wine_id]) {
@@ -201,7 +197,7 @@ export default function AnalyticsPage() {
           if (r.would_buy) wineRatings[r.event_wine_id].wouldBuy++
         })
 
-        const topWines: TopWine[] = wines
+        const ratedWines: TopWine[] = wines
           ?.filter(w => wineRatings[w.id])
           .map(w => ({
             id: w.id,
@@ -212,8 +208,21 @@ export default function AnalyticsPage() {
             ratingCount: wineRatings[w.id].ratings.length,
             wouldBuyCount: wineRatings[w.id].wouldBuy,
           }))
-          .sort((a, b) => b.avgRating - a.avgRating)
-          .slice(0, 10) || []
+          .sort((a, b) => b.avgRating - a.avgRating) || []
+
+        const unratedWines: TopWine[] = wines
+          ?.filter(w => !wineRatings[w.id])
+          .map(w => ({
+            id: w.id,
+            wine_name: w.wine_name,
+            producer: w.producer,
+            wine_type: w.wine_type,
+            avgRating: 0,
+            ratingCount: 0,
+            wouldBuyCount: 0,
+          })) || []
+
+        const topWines: TopWine[] = [...ratedWines, ...unratedWines]
 
         // Wine type breakdown
         const typeStats: Record<string, { count: number; totalRating: number }> = {}
@@ -412,7 +421,7 @@ export default function AnalyticsPage() {
 
       {!analytics || analytics.totalRatings === 0 ? (
         <Card variant="outlined" padding="lg" className="text-center">
-          <BarChart3 className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
+          <Wine className="h-12 w-12 text-[var(--foreground-muted)] mx-auto mb-4" />
           <h2 className="text-body-lg font-medium text-[var(--foreground)] mb-2">
             No data yet
           </h2>
@@ -422,192 +431,163 @@ export default function AnalyticsPage() {
         </Card>
       ) : (
         <>
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatCard
-              icon={Star}
-              label="Total Ratings"
-              value={analytics.totalRatings.toLocaleString()}
-              color="gold"
-            />
-            <StatCard
-              icon={Users}
-              label="Participants"
-              value={analytics.totalParticipants.toLocaleString()}
-              color="wine"
-            />
-            <StatCard
-              icon={TrendingUp}
-              label="Avg Rating"
-              value={analytics.averageRating.toFixed(1)}
-              suffix="/ 5"
-              color="gold"
-            />
-            <StatCard
-              icon={ShoppingBag}
-              label="Would Buy"
-              value={`${analytics.wouldBuyPercentage}%`}
-              color="wine"
-            />
-            <StatCard
-              icon={SkipForward}
-              label="Skipped"
-              value={analytics.totalSkips.toLocaleString()}
-              color="wine"
-            />
+          {/* 3 Key Numbers */}
+          <div className="grid grid-cols-3 gap-4">
+            <StatCard icon={Users} label="Guests" value={analytics.totalParticipants.toLocaleString()} color="wine" />
+            <StatCard icon={Star} label="Avg Score" value={analytics.averageRating.toFixed(1)} suffix="/ 5" color="gold" />
+            <StatCard icon={ShoppingBag} label="Would Buy" value={`${analytics.wouldBuyPercentage}%`} color="wine" />
           </div>
 
-          {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Top Wines */}
-            <Card variant="outlined" padding="lg">
-              <div className="flex items-center gap-2 mb-4">
+          {/* Wine Scorecard — full width, all wines */}
+          <Card variant="outlined" padding="lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-[var(--gold)]" />
-                <h2 className="text-body-lg font-semibold text-[var(--foreground)]">
-                  Top Rated Wines
-                </h2>
+                <h2 className="text-body-lg font-semibold text-[var(--foreground)]">Wine Scorecard</h2>
               </div>
-              <div className="space-y-3">
-                {analytics.topWines.slice(0, 5).map((wine, index) => (
+              <span className="text-body-sm text-[var(--foreground-muted)]">
+                {analytics.topWines.length} wine{analytics.topWines.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Column headers */}
+            <div className="grid grid-cols-12 gap-2 px-3 mb-2">
+              <span className="col-span-1 text-body-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wide">#</span>
+              <span className="col-span-5 text-body-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wide">Wine</span>
+              <span className="col-span-2 text-body-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wide text-center">Score</span>
+              <span className="col-span-2 text-body-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wide text-center">Tasted by</span>
+              <span className="col-span-2 text-body-xs font-medium text-[var(--foreground-muted)] uppercase tracking-wide text-right">Would Buy</span>
+            </div>
+
+            <div className="space-y-1">
+              {analytics.topWines.map((wine, index) => {
+                const wouldBuyPct = wine.ratingCount > 0
+                  ? Math.round((wine.wouldBuyCount / wine.ratingCount) * 100)
+                  : null
+                const isTopThree = index < 3 && wine.ratingCount > 0
+
+                return (
                   <div
                     key={wine.id}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-[var(--background)]"
+                    className={cn(
+                      'grid grid-cols-12 gap-2 items-center px-3 py-2.5 rounded-lg',
+                      isTopThree ? 'bg-[var(--wine-muted)]' : 'hover:bg-[var(--surface)]'
+                    )}
                   >
-                    <div
-                      className={cn(
-                        'w-8 h-8 rounded-lg flex items-center justify-center text-body-sm font-bold',
-                        index === 0
-                          ? 'bg-[var(--gold)] text-white'
-                          : index === 1
-                          ? 'bg-gray-400 text-white'
-                          : index === 2
-                          ? 'bg-amber-600 text-white'
-                          : 'bg-[var(--border)] text-[var(--foreground-muted)]'
+                    {/* Rank */}
+                    <span className={cn(
+                      'col-span-1 text-body-sm font-bold',
+                      index === 0 ? 'text-[var(--gold)]'
+                      : index === 1 ? 'text-gray-400'
+                      : index === 2 ? 'text-amber-600'
+                      : 'text-[var(--foreground-muted)]'
+                    )}>
+                      {wine.ratingCount > 0 ? index + 1 : '—'}
+                    </span>
+
+                    {/* Wine name + producer */}
+                    <div className="col-span-5 min-w-0">
+                      <p className="text-body-sm font-medium text-[var(--foreground)] truncate">{wine.wine_name}</p>
+                      {wine.producer && (
+                        <p className="text-body-xs text-[var(--foreground-muted)] truncate">{wine.producer}</p>
                       )}
-                    >
-                      {index + 1}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-body-md font-medium text-[var(--foreground)] truncate">
-                        {wine.wine_name}
-                      </p>
-                      <p className="text-body-sm text-[var(--foreground-muted)]">
-                        {wine.ratingCount} ratings
-                        {wine.wouldBuyCount > 0 && ` · ${wine.wouldBuyCount} would buy`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-[var(--gold)] fill-current" />
-                      <span className="text-body-md font-semibold text-[var(--foreground)]">
-                        {wine.avgRating.toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
 
-            {/* Rating Distribution */}
-            <Card variant="outlined" padding="lg">
-              <div className="flex items-center gap-2 mb-4">
-                <BarChart3 className="h-5 w-5 text-[var(--wine)]" />
-                <h2 className="text-body-lg font-semibold text-[var(--foreground)]">
-                  Rating Distribution
-                </h2>
-              </div>
-              <div className="space-y-3">
-                {[5, 4, 3, 2, 1].map((stars) => {
-                  const count = analytics.ratingDistribution[stars - 1]
-                  const percentage = analytics.totalRatings > 0
-                    ? (count / analytics.totalRatings) * 100
-                    : 0
-
-                  return (
-                    <div key={stars} className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 w-16">
-                        <span className="text-body-sm text-[var(--foreground)]">{stars}</span>
-                        <Star className="h-4 w-4 text-[var(--gold)] fill-current" />
-                      </div>
-                      <div className="flex-1 h-6 bg-[var(--background)] rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${percentage}%` }}
-                          transition={{ duration: 0.5, delay: (5 - stars) * 0.1 }}
-                          className="h-full bg-[var(--wine)] rounded-full"
-                        />
-                      </div>
-                      <span className="text-body-sm text-[var(--foreground-muted)] w-12 text-right">
-                        {count}
-                      </span>
+                    {/* Score */}
+                    <div className="col-span-2 flex items-center justify-center gap-1">
+                      {wine.ratingCount > 0 ? (
+                        <>
+                          <Star className="h-3.5 w-3.5 text-[var(--gold)] fill-current flex-shrink-0" />
+                          <span className="text-body-sm font-semibold text-[var(--foreground)]">
+                            {wine.avgRating.toFixed(1)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-body-sm text-[var(--foreground-muted)]">—</span>
+                      )}
                     </div>
-                  )
-                })}
-              </div>
-            </Card>
 
-            {/* Wine Type Breakdown */}
-            <Card variant="outlined" padding="lg">
-              <div className="flex items-center gap-2 mb-4">
-                <Wine className="h-5 w-5 text-[var(--wine)]" />
-                <h2 className="text-body-lg font-semibold text-[var(--foreground)]">
-                  By Wine Type
-                </h2>
-              </div>
-              <div className="space-y-3">
-                {analytics.wineTypeBreakdown.map((item) => (
-                  <div
-                    key={item.type}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[var(--background)]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{getWineEmoji(item.type)}</span>
-                      <span className="text-body-md font-medium text-[var(--foreground)] capitalize">
-                        {item.type}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-body-sm text-[var(--foreground-muted)]">
-                        {item.count} ratings
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-[var(--gold)] fill-current" />
-                        <span className="text-body-sm font-medium text-[var(--foreground)]">
-                          {item.avgRating.toFixed(1)}
+                    {/* Tasted by */}
+                    <div className="col-span-2 text-center">
+                      {wine.ratingCount > 0 ? (
+                        <span className="text-body-sm text-[var(--foreground-secondary)]">
+                          {wine.ratingCount} <span className="text-[var(--foreground-muted)]">guest{wine.ratingCount !== 1 ? 's' : ''}</span>
                         </span>
-                      </div>
+                      ) : (
+                        <span className="text-body-sm text-[var(--foreground-muted)]">Not tasted</span>
+                      )}
+                    </div>
+
+                    {/* Would Buy */}
+                    <div className="col-span-2 text-right">
+                      {wouldBuyPct !== null ? (
+                        <span className={cn(
+                          'text-body-sm font-medium',
+                          wouldBuyPct >= 50 ? 'text-[var(--wine)]' : 'text-[var(--foreground-secondary)]'
+                        )}>
+                          {wouldBuyPct}%
+                        </span>
+                      ) : (
+                        <span className="text-body-sm text-[var(--foreground-muted)]">—</span>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </Card>
+                )
+              })}
+            </div>
+
+            {analytics.totalSkips > 0 && (
+              <p className="mt-4 pt-3 border-t border-[var(--border)] text-body-xs text-[var(--foreground-muted)]">
+                {analytics.totalSkips} wine{analytics.totalSkips !== 1 ? 's were' : ' was'} skipped across all participants
+              </p>
+            )}
+          </Card>
+
+          {/* Secondary context — screen only */}
+          <div className="no-print grid lg:grid-cols-2 gap-6">
+            {/* Wine Type Breakdown */}
+            {analytics.wineTypeBreakdown.length > 0 && (
+              <Card variant="outlined" padding="lg">
+                <div className="flex items-center gap-2 mb-4">
+                  <Wine className="h-5 w-5 text-[var(--wine)]" />
+                  <h2 className="text-body-lg font-semibold text-[var(--foreground)]">By Type</h2>
+                </div>
+                <div className="space-y-2">
+                  {analytics.wineTypeBreakdown.map((item) => (
+                    <div key={item.type} className="flex items-center justify-between py-1.5 border-b border-[var(--border)] last:border-0">
+                      <div className="flex items-center gap-2">
+                        <span>{getWineEmoji(item.type)}</span>
+                        <span className="text-body-sm text-[var(--foreground)] capitalize">{item.type}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-body-sm text-[var(--foreground-secondary)]">
+                        <span>{item.count} ratings</span>
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3.5 w-3.5 text-[var(--gold)] fill-current" />
+                          <span className="font-medium">{item.avgRating.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             {/* Recent Activity */}
-            <Card variant="outlined" padding="lg" className="no-print">
+            <Card variant="outlined" padding="lg">
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="h-5 w-5 text-[var(--wine)]" />
-                <h2 className="text-body-lg font-semibold text-[var(--foreground)]">
-                  Recent Activity
-                </h2>
+                <h2 className="text-body-lg font-semibold text-[var(--foreground)]">Recent Activity</h2>
               </div>
               <div className="space-y-2">
                 {analytics.recentActivity.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0"
-                  >
+                  <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-[var(--border)] last:border-0">
                     <div className="flex-1 min-w-0">
-                      <p className="text-body-sm text-[var(--foreground)] truncate">
-                        {item.wine_name}
-                      </p>
-                      <p className="text-body-xs text-[var(--foreground-muted)]">
-                        {formatTimeAgo(item.created_at)}
-                      </p>
+                      <p className="text-body-sm text-[var(--foreground)] truncate">{item.wine_name}</p>
+                      <p className="text-body-xs text-[var(--foreground-muted)]">{formatTimeAgo(item.created_at)}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <Star className="h-3.5 w-3.5 text-[var(--gold)] fill-current" />
-                      <span className="text-body-sm font-medium text-[var(--foreground)]">
-                        {item.rating}
-                      </span>
+                      <span className="text-body-sm font-medium text-[var(--foreground)]">{item.rating}</span>
                     </div>
                   </div>
                 ))}
