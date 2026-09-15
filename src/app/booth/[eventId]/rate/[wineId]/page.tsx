@@ -299,22 +299,13 @@ export default function BoothRatePage() {
           <span className="text-body-sm text-[var(--foreground-muted)]">
             {currentIndex + 1} of {allWineIds.length}
           </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsFavorite(!isFavorite)}
-              className={cn('p-2 rounded-xl transition-all duration-200', isFavorite ? 'text-red-400 bg-red-900/20' : 'text-[var(--foreground-muted)] hover:text-red-400')}
-              title="Save to favorites"
-            >
-              <Heart className={cn('h-5 w-5', isFavorite && 'fill-current')} />
-            </button>
-            <button
-              onClick={() => setWouldBuy(!wouldBuy)}
-              className={cn('p-2 rounded-xl transition-all duration-200', wouldBuy ? 'text-[var(--gold)] bg-[var(--gold-muted)]' : 'text-[var(--foreground-muted)] hover:text-[var(--gold)]')}
-              title="Would buy this wine"
-            >
-              <ShoppingBag className={cn('h-5 w-5', wouldBuy && 'fill-current')} />
-            </button>
-          </div>
+          <button
+            onClick={() => setWouldBuy(!wouldBuy)}
+            className={cn('p-2 rounded-xl transition-all duration-200', wouldBuy ? 'text-[var(--gold)] bg-[var(--gold-muted)]' : 'text-[var(--foreground-muted)] hover:text-[var(--gold)]')}
+            title="Would buy this wine"
+          >
+            <ShoppingBag className={cn('h-5 w-5', wouldBuy && 'fill-current')} />
+          </button>
         </div>
       </header>
 
@@ -595,12 +586,24 @@ export default function BoothRatePage() {
             </Card>
           ) : (
             <Card variant="elevated" padding="lg">
-              <div className="text-center mb-6">
+              <div className="text-center mb-4">
                 <h2 className="text-body-lg font-semibold text-[var(--foreground)] mb-2">
                   How would you rate this wine?
                 </h2>
                 <StarRating value={rating} onChange={setRating} size="lg" showValue />
               </div>
+              <button
+                onClick={() => setIsFavorite(!isFavorite)}
+                className={cn(
+                  'flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border mb-4 transition-all duration-200 text-body-sm font-medium',
+                  isFavorite
+                    ? 'border-red-500/50 bg-red-900/20 text-red-400'
+                    : 'border-[var(--border)] text-[var(--foreground-muted)] hover:border-red-500/30 hover:text-red-400'
+                )}
+              >
+                <Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} />
+                {isFavorite ? 'Saved to favorites' : 'Save to favorites'}
+              </button>
               <Textarea
                 label="Personal Notes (optional)"
                 placeholder="What stood out to you? Any flavors you noticed?"
