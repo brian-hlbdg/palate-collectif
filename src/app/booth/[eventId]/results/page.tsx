@@ -67,7 +67,7 @@ export default function BoothResultsPage() {
           <div className="px-4 py-3 flex items-center gap-3">
             <button
               onClick={() => router.push(`/booth/${eventCode}/wines`)}
-              className="p-2 -ml-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
+              className="p-3 -ml-3 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
@@ -125,7 +125,7 @@ export default function BoothResultsPage() {
         <div className="px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => router.push(`/booth/${eventCode}/wines`)}
-            className="p-2 -ml-2 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
+            className="p-3 -ml-3 text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>

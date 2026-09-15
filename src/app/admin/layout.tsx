@@ -159,8 +159,8 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col">
+      {/* Sidebar — shows on tablet (md) and up */}
+      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:w-64 md:flex-col">
         <div className="flex flex-col flex-1 bg-[var(--surface)] border-r border-[var(--border)]">
           {/* Logo */}
           <div className="flex items-center gap-3 h-16 px-6 border-b border-[var(--border)]">
@@ -261,8 +261,8 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      {/* Mobile header */}
-      <header className="lg:hidden sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--border)]">
+      {/* Mobile header — hidden on tablet and up */}
+      <header className="md:hidden sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--border)]">
         <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-3">
             <Wine className="h-7 w-7 text-[var(--wine)]" />
@@ -355,7 +355,7 @@ export default function AdminLayout({
       </header>
 
       {/* Main content */}
-      <main className="lg:pl-64">
+      <main className="md:pl-64">
         <div className="p-4 sm:p-6 lg:p-8">
           {children}
         </div>

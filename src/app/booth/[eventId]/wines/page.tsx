@@ -528,7 +528,7 @@ export default function BoothWinesPage() {
       <nav className="fixed bottom-0 left-0 right-0 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)] z-30">
         <div className="max-w-2xl mx-auto flex items-center justify-around py-2 px-4 safe-area-inset-bottom">
           <button
-            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--wine)]"
+            className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl text-[var(--wine)]"
           >
             <Wine className="h-5 w-5" />
             <span className="text-body-xs font-medium">Wines</span>
@@ -537,7 +537,7 @@ export default function BoothWinesPage() {
           {/* Buddies Button */}
           <button
             onClick={() => setShowBuddiesPanel(true)}
-            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors relative"
+            className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl text-[var(--foreground-secondary)] hover:text-[var(--foreground)] transition-colors relative"
           >
             <Users className="h-5 w-5" />
             <span className="text-body-xs">Buddies</span>
@@ -552,7 +552,7 @@ export default function BoothWinesPage() {
           {eventClosed ? (
             <button
               onClick={() => router.push(`/booth/${eventCode}/results`)}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
+              className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
             >
               <Trophy className="h-5 w-5" />
               <span className="text-body-xs font-medium">Results</span>
@@ -580,7 +580,7 @@ export default function BoothWinesPage() {
           {isTempUser && (
             <button
               onClick={() => setShowPersonalModal(true)}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
+              className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl text-[var(--wine)] bg-[var(--wine-muted)] relative"
             >
               <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--wine)] animate-pulse" />
               <User className="h-5 w-5" />
