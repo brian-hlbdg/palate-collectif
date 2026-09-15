@@ -42,3 +42,7 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# MCP server config (contains access tokens)
+.mcp.json
+.claude/
